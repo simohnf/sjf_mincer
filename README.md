@@ -8,7 +8,7 @@ granular delay plugin
 
 In terminal 
 ```
-git clone [https://github.com/simohnf/sjf_verb](https://github.com/simohnf/sjf_mincer)
+git clone https://github.com/simohnf/sjf_verb
 
 cd sjf_mincer
 
