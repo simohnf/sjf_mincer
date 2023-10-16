@@ -9,7 +9,7 @@
 #pragma once
 
 #include <JuceHeader.h>
-
+#include "../sjf_audio/sjf_granularDelay.h"
 //==============================================================================
 /**
 */
@@ -58,5 +58,11 @@ public:
 
 private:
     //==============================================================================
+    
+    
+    void setParameters();
+    
+    sjf_granularDelay< 2, 4 > m_granDel;
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Sjf_mincerAudioProcessor)
 };
