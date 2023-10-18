@@ -58,11 +58,25 @@ public:
 
 private:
     //==============================================================================
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    juce::AudioProcessorValueTreeState parameters;
+    
+    
+    std::atomic<float>* delayTimeParameter = nullptr;
+    std::atomic<float>* delayTimeJitterParameter = nullptr;
+    std::atomic<float>* feedbackParameter = nullptr;
+    std::atomic<float>* transpositionParameter = nullptr;
+    std::atomic<float>* transpositionJitterParameter = nullptr;
+    std::atomic<float>* reverseParameter = nullptr;
+    std::atomic<float>* densityParameter = nullptr;
+    std::atomic<float>* rateParameter = nullptr;
+    std::atomic<float>* crossTalkParameter = nullptr;
+    std::atomic<float>* mixParameter = nullptr;
     
     
     void setParameters();
     
-    sjf_granularDelay< 2, 4 > m_granDel;
+    sjf_granularDelay< 8 > m_granDel;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Sjf_mincerAudioProcessor)
 };
