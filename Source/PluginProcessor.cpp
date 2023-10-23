@@ -34,7 +34,6 @@ Sjf_mincerAudioProcessor::Sjf_mincerAudioProcessor()
     crossTalkParameter = parameters.getRawParameterValue( "crossTalk" );
     mixParameter  = parameters.getRawParameterValue( "mix" );
     
-    m_granDel.initialise( getSampleRate() );
     DBG("Initialised 1");
 }
 
@@ -152,17 +151,9 @@ void Sjf_mincerAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear ( i, 0, buffer.getNumSamples() );
 
-    
-    
     setParameters();
     
-    
-//    DBG("Process");
-    
     m_granDel.process( buffer );
-    
-//    DBG("Processed Block");
-    
 
 }
 

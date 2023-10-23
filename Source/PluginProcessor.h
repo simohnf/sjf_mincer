@@ -76,7 +76,7 @@ private:
     
     void setParameters();
     
-    sjf_granularDelay< 8 > m_granDel;
+    sjf_granularDelay< 16 > m_granDel;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Sjf_mincerAudioProcessor)
 };
