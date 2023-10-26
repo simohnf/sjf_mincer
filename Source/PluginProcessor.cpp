@@ -30,6 +30,11 @@ Sjf_mincerAudioProcessor::Sjf_mincerAudioProcessor()
     transpositionJitterParameter = parameters.getRawParameterValue( "transpositionJitter" );
     reverseParameter = parameters.getRawParameterValue( "reverse" );
     densityParameter = parameters.getRawParameterValue( "density" );
+    
+    repeatParameter = parameters.getRawParameterValue( "repeat" );
+    
+    bitDepthParameter = parameters.getRawParameterValue( "bitRate" );
+    srDividerParameter = parameters.getRawParameterValue( "sampleRateDivider" );
     rateParameter = parameters.getRawParameterValue( "rate" );
     crossTalkParameter = parameters.getRawParameterValue( "crossTalk" );
     mixParameter  = parameters.getRawParameterValue( "mix" );
@@ -211,6 +216,11 @@ void Sjf_mincerAudioProcessor::setParameters()
     
     m_granDel.setDensity( *densityParameter );
     
+    m_granDel.setRepeat( *repeatParameter );
+    
+    m_granDel.setBitDepth( *bitDepthParameter );
+    m_granDel.setSampleRateDivider( *srDividerParameter );
+    
     m_granDel.setRate( *rateParameter  );
     
     m_granDel.setCrossTalk( *crossTalkParameter );
@@ -241,6 +251,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::cr
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "density", pIDVersionNumber }, "Density", 0, 100, 100 ) );
     
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "rate", pIDVersionNumber }, "Rate", 1, 100, 1 ) );
+    
+
+    params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "repeat", pIDVersionNumber }, "Repeat", 1, 100, 0 ) );
+    
+    params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "bitRate", pIDVersionNumber }, "BitRate", 1, 32, 32 ) );
+    params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "sampleRateDivider", pIDVersionNumber }, "SampleRateDivider", 1, 16, 1 ) );
     
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "crossTalk", pIDVersionNumber }, "CrossTalk", 1, 100, 1 ) );
     
