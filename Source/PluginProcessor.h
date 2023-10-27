@@ -61,28 +61,52 @@ private:
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     juce::AudioProcessorValueTreeState parameters;
     
+    void setParameters();
+    
+    juce::AudioPlayHead* playHead;
+    juce::AudioPlayHead::PositionInfo positionInfo;
     
     std::atomic<float>* delayTimeParameter = nullptr;
     std::atomic<float>* delayTimeJitterParameter = nullptr;
-    std::atomic<float>* delayTimeSync = nullptr;
+    
+    std::atomic<float>* delayTimeSyncParameter = nullptr;
+    
+    std::atomic<float>* delayTimeSyncDivisionParameter = nullptr;
+    std::atomic<float>* delayTimeSyncDivisionNumberParameter = nullptr;
+    std::atomic<float>* delaySyncOffsetParameter = nullptr;
+    
+    
+    std::atomic<float>* delayTimeJitterSyncParameter = nullptr;
+    std::atomic<float>* delaySyncJitterDivisionParameter = nullptr;
+    std::atomic<float>* delaySyncJitterNDivisionsParameter = nullptr;
+    
+    
     std::atomic<float>* feedbackParameter = nullptr;
     std::atomic<float>* transpositionParameter = nullptr;
     std::atomic<float>* transpositionJitterParameter = nullptr;
     std::atomic<float>* reverseParameter = nullptr;
-    std::atomic<float>* densityParameter = nullptr;
+    
     
     std::atomic<float>* repeatParameter = nullptr;
     
     std::atomic<float>* rateParameter = nullptr;
     
+    std::atomic<float>* rateSyncParameter = nullptr;
+    std::atomic<float>* rateSyncDivisionParameter = nullptr;
+    std::atomic<float>* rateSyncNumDivisionsParameter = nullptr;
+    
     std::atomic<float>* bitDepthParameter = nullptr;
     std::atomic<float>* srDividerParameter = nullptr;
     
     std::atomic<float>* crossTalkParameter = nullptr;
+    
+    
+    std::atomic<float>* outputModeParameter = nullptr;
+    std::atomic<float>* densityParameter = nullptr;
     std::atomic<float>* mixParameter = nullptr;
     
     
-    void setParameters();
+    
     
     sjf_granularDelay< 16 > m_granDel;
     
