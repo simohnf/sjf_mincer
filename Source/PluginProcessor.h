@@ -63,6 +63,8 @@ private:
     
     void setParameters();
     
+    static constexpr int MAX_N_HARMONIES = 4;
+    
     juce::AudioPlayHead* playHead;
     juce::AudioPlayHead::PositionInfo positionInfo;
     
@@ -82,8 +84,16 @@ private:
     
     
     std::atomic<float>* feedbackParameter = nullptr;
+    std::atomic<float>* feedbackControlParameter = nullptr;
+    
+
+    std::array< std::atomic<float>*, MAX_N_HARMONIES > harmoniesOnParameters;
+    std::array< std::atomic<float>*, MAX_N_HARMONIES > harmoniesParameters;
     std::atomic<float>* transpositionParameter = nullptr;
     std::atomic<float>* transpositionJitterParameter = nullptr;
+    
+    
+    
     std::atomic<float>* reverseParameter = nullptr;
     
     
@@ -95,6 +105,7 @@ private:
     std::atomic<float>* rateSyncDivisionParameter = nullptr;
     std::atomic<float>* rateSyncNumDivisionsParameter = nullptr;
     
+    std::atomic<float>* bitCrushParameter = nullptr;
     std::atomic<float>* bitDepthParameter = nullptr;
     std::atomic<float>* srDividerParameter = nullptr;
     
@@ -105,10 +116,14 @@ private:
     std::atomic<float>* densityParameter = nullptr;
     std::atomic<float>* mixParameter = nullptr;
     
+    std::atomic<float>* interpolationTypeParameter = nullptr;
+    
+    
+
     
     
     
-    sjf_granularDelay< 16 > m_granDel;
+    sjf_granularDelay< 16, MAX_N_HARMONIES > m_granDel;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Sjf_mincerAudioProcessor)
 };
