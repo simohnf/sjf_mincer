@@ -23,6 +23,7 @@ Sjf_mincerAudioProcessor::Sjf_mincerAudioProcessor()
 , parameters( *this, nullptr, juce::Identifier("sjf_mincer"), createParameterLayout() )
 #endif
 {
+    DBG("started initialisation");
     delayTimeParameter = parameters.getRawParameterValue( "delayTime" );
     delayTimeJitterParameter = parameters.getRawParameterValue( "delayTimeJitter" );
     
@@ -54,7 +55,7 @@ Sjf_mincerAudioProcessor::Sjf_mincerAudioProcessor()
     repeatParameter = parameters.getRawParameterValue( "repeat" );
     
     bitCrushParameter = parameters.getRawParameterValue( "crush" );
-    bitDepthParameter = parameters.getRawParameterValue( "bitRate" );
+    bitDepthParameter = parameters.getRawParameterValue( "bitDepth" );
     srDividerParameter = parameters.getRawParameterValue( "sampleRateDivider" );
     
     rateParameter = parameters.getRawParameterValue( "rate" );
@@ -204,8 +205,9 @@ bool Sjf_mincerAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* Sjf_mincerAudioProcessor::createEditor()
 {
-//    return new Sjf_mincerAudioProcessorEditor (*this);
-    return new juce::GenericAudioProcessorEditor (*this);
+    return new Sjf_mincerAudioProcessorEditor ( *this, parameters );
+//    return new Sjf_mincerAudioProcessorEditor ( *this );
+//    return new juce::GenericAudioProcessorEditor (*this);
 }
 
 //==============================================================================
@@ -234,6 +236,7 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 void Sjf_mincerAudioProcessor::setParameters()
 {
     auto dt = *delayTimeParameter * 0.001f * getSampleRate();
+    m_granDel.setJitterSync( false );
     auto gRate = *rateParameter * 1.0f;
 
 
@@ -249,23 +252,24 @@ void Sjf_mincerAudioProcessor::setParameters()
             if ( *rateSyncParameter )
             {
                 auto wholeNoteS = 60.0 / bpm;
-                auto divS = *rateSyncNumDivisionsParameter * wholeNoteS / *rateSyncDivisionParameter;
+                auto multiplier = m_divNames.getMultiplier( *rateSyncDivisionParameter );
+                auto divS = multiplier * *rateSyncNumDivisionsParameter * wholeNoteS;
                 gRate = 1.0 / divS;
             }
             if ( *delayTimeSyncParameter )
             {
-                dt = wholeNoteSamps * *delayTimeSyncDivisionNumberParameter / *delayTimeSyncDivisionParameter;
+                auto multiplier = m_divNames.getMultiplier( *delayTimeSyncDivisionParameter );
+                dt = wholeNoteSamps * *delayTimeSyncDivisionNumberParameter * multiplier;
                 dt += dt * (*delaySyncOffsetParameter * 0.01f);
             }
             if ( *delayTimeJitterSyncParameter )
             {
                 m_granDel.setJitterSync( true );
-                m_granDel.setSyncedDelayJitterValues( wholeNoteSamps / *delaySyncJitterDivisionParameter, *delaySyncJitterNDivisionsParameter );
-
+                auto multiplier = m_divNames.getMultiplier( *delaySyncJitterDivisionParameter );
+                m_granDel.setSyncedDelayJitterValues( multiplier * wholeNoteSamps, *delaySyncJitterNDivisionsParameter );
             }
         }
     }
-    
     
     m_granDel.setDelayTimeSamps( dt );
     m_granDel.setDelayTimeJitter( *delayTimeJitterParameter );
@@ -309,9 +313,17 @@ void Sjf_mincerAudioProcessor::setParameters()
 
 juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::createParameterLayout()
 {
+    DBG("creating parameter layout");
     static constexpr int pIDVersionNumber = 1;
     juce::AudioProcessorValueTreeState::ParameterLayout params;
 
+    
+    sjf_divNames< NDIVLEVELS > temp;
+    
+    auto dn = temp.getAllNames();
+    juce::StringArray divNames;
+    for ( auto i = 0; i < dn.size(); i++ )
+        divNames.add( juce::String( dn[ i ] ) );
     
     auto range = juce::NormalisableRange< float > ( 0, 10000 );
     auto attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); })
@@ -319,8 +331,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::cr
     // delay time parameters
     params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "delayTimeSync", pIDVersionNumber }, "DelayTimeSync", false ) );
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "delayTime", pIDVersionNumber }, "DelayTime", range, 500, attributes ) );
-    params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "division", pIDVersionNumber }, "Division",  1, 128, 4 ) );
+
     params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "numDivisions", pIDVersionNumber }, "NumDivision", 1, 128, 1 ) );
+    params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "division", pIDVersionNumber }, "Division", divNames, 0 ) );
+//    params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "division", pIDVersionNumber }, "Division",  1, 128, 4 ) );
+
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "syncOffset", pIDVersionNumber }, "SyncOffset", -33.3333, 33.3333, 0 ) );
     
     range = juce::NormalisableRange< float > ( 0, 100 );
@@ -336,8 +351,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::cr
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "delayTimeJitter", pIDVersionNumber }, "DelayTimeJitter", range, 0, attributes ) );
     params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "syncJitter" , pIDVersionNumber }, "SyncJitter" , false ) );
     
-    params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "syncedJitterDivision", pIDVersionNumber }, "SyncedJitterDivision",  1, 128, 16 ) );
     params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "syncedJitterMaxNumDivisions", pIDVersionNumber }, "SyncedJitterMaxNumDivisions",  1, 128, 16 ) );
+    params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "syncedJitterDivision", pIDVersionNumber }, "SyncedJitterDivision", divNames, 0 ) );
+//    params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "syncedJitterDivision", pIDVersionNumber }, "SyncedJitterDivision",  1, 128, 16 ) );
+
     
     
     
@@ -367,8 +384,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::cr
     attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); })
                                                      .withLabel ("Hz");
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "rate", pIDVersionNumber }, "Rate", range, 1, attributes ) );
-    params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "rateSyncDivision", pIDVersionNumber }, "RateSyncDivision", 1, 128, 16 ) );
     params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "rateSyncNumDivisions", pIDVersionNumber }, "RateSyncNumDivisions", 1, 128, 1 ) );
+    params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "rateSyncDivision", pIDVersionNumber }, "RateSyncDivision", divNames, 0 ) );
+//    params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "rateSyncDivision", pIDVersionNumber }, "RateSyncDivision", 1, 128, 16 ) );
+    
 
     range = juce::NormalisableRange< float > ( 0, 100 );
     attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); })
@@ -380,7 +399,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::cr
     
     
     params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "crush", pIDVersionNumber }, "Crush", false ) );
-    params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "bitRate", pIDVersionNumber }, "BitRate", 1, 16, 16 ) );
+    params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "bitDepth", pIDVersionNumber }, "BitDepth", 1, 16, 16 ) );
     params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "sampleRateDivider", pIDVersionNumber }, "SampleRateDivider", 1, 16, 1 ) );
     
     

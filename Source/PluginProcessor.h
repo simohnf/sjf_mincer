@@ -10,6 +10,7 @@
 
 #include <JuceHeader.h>
 #include "../sjf_audio/sjf_granularDelay.h"
+#include "../sjf_audio/sjf_audioUtilitiesC++.h"
 //==============================================================================
 /**
 */
@@ -56,6 +57,9 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    
+    auto getDivNames( ){ return m_divNames.getAllNames(); }
+    
 private:
     //==============================================================================
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
@@ -124,6 +128,7 @@ private:
     
     
     sjf_granularDelay< 16, MAX_N_HARMONIES > m_granDel;
-    
+    static constexpr int NDIVLEVELS = 8;
+    sjf_divNames< NDIVLEVELS > m_divNames;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Sjf_mincerAudioProcessor)
 };
