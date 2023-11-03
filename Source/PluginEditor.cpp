@@ -11,15 +11,18 @@
 
 #define TEXT_HEIGHT 20
 #define INDENT 10
-#define SLIDERSIZE 80
-#define WIDTH SLIDERSIZE*8 +INDENT*2
-#define HEIGHT TEXT_HEIGHT*3 + INDENT*4 + SLIDERSIZE*5
+#define SLIDERSIZE 100
+#define WIDTH SLIDERSIZE*8 +INDENT*13
+#define HEIGHT TEXT_HEIGHT*6 + INDENT + SLIDERSIZE*2
 //==============================================================================
 Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioProcessor& p, juce::AudioProcessorValueTreeState& vts)
 : AudioProcessorEditor (&p), audioProcessor (p), valueTreeState( vts )
 {
     auto divNames = audioProcessor.getDivNames();
+    auto interpNames = audioProcessor.getInterpNames();
+    
     setLookAndFeel( &otherLookAndFeel );
+    otherLookAndFeel.drawComboBoxTick = false;
     
 //        outputModeBox, interpolationTypeBox, rateSyncDivisionBox, delayTimeSyncDivisionBox, delaySyncJitterDivisionBox, rateSyncDivision;
 //    outputModeBoxAttachment, interpolationTypeBoxAttachment, rateSyncDivisionBoxAttachment, delayTimeSyncDivisionBoxAttachment, delaySyncJitterDivisionBoxAttachment, rateSyncDivisionAttachment;
@@ -35,6 +38,7 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     
     addAndMakeVisible( &delayTimeSlider );
     delayTimeSlider.setSliderStyle( juce::Slider::Rotary );
+    delayTimeSlider.setTextValueSuffix("ms");
     delayTimeSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "delayTime", delayTimeSlider )  );
     delayTimeSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, delayTimeSlider.getWidth(), TEXT_HEIGHT );
 //    delayTimeSlider.setTooltip( "This sets the overall probability of different divisions being included in the rhythmic pattern" );
@@ -54,9 +58,12 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     addAndMakeVisible( &delaySyncOffsetSlider );
     delaySyncOffsetSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "syncOffset", delaySyncOffsetSlider )  );
     delaySyncOffsetSlider.sendLookAndFeelChange();
+    delaySyncOffsetSlider.setTextValueSuffix("%");
     
-    
-    
+    addAndMakeVisible( &offsetLabel );
+    offsetLabel.attachToComponent( &delaySyncOffsetSlider, false );
+    offsetLabel.setText( "offset", juce::dontSendNotification );
+    offsetLabel.setJustificationType( juce::Justification::centred );
     
     addAndMakeVisible( &feedbackSlider );
     feedbackSlider.setSliderStyle( juce::Slider::Rotary );
@@ -64,7 +71,12 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     feedbackSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, feedbackSlider.getWidth(), TEXT_HEIGHT );
 //    feedbackSlider.setTooltip( "This sets the overall probability of different divisions being included in the rhythmic pattern" );
     feedbackSlider.sendLookAndFeelChange();
+    feedbackSlider.setTextValueSuffix( "%" );
     
+    
+    addAndMakeVisible( &feedbackControlButton );
+    feedbackControlButtonAttachment.reset( new juce::AudioProcessorValueTreeState::ButtonAttachment( valueTreeState, "feedbackControl", feedbackControlButton ) );
+    feedbackControlButton.sendLookAndFeelChange();
     
     addAndMakeVisible( &delayTimeJitterSyncButton );
     delayTimeJitterSyncButton.setButtonText( "Sync" );
@@ -80,7 +92,7 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     delayTimeJitterSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, delayTimeJitterSlider.getWidth(), TEXT_HEIGHT );
 //    delayTimeJitterSlider.setTooltip( "This sets the overall probability of different divisions being included in the rhythmic pattern" );
     delayTimeJitterSlider.sendLookAndFeelChange();
-    
+    delayTimeJitterSlider.setTextValueSuffix( "%" );
     
     
     addAndMakeVisible( &delaySyncJitterNDivisionsSlider );
@@ -112,6 +124,10 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     rateSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, rateSlider.getWidth(), TEXT_HEIGHT );
 //    delayTimeJitterSlider.setTooltip( "This sets the overall probability of different divisions being included in the rhythmic pattern" );
     rateSlider.sendLookAndFeelChange();
+    rateSlider.setTextValueSuffix( " Hz" );
+    
+    
+    
     
     addAndMakeVisible( &rateSyncDivisionBox );
     for ( auto i = 0; i < divNames.size(); i++ )
@@ -138,10 +154,37 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     transpositionJitterSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, transpositionJitterSlider.getWidth(), TEXT_HEIGHT );
 //    delayTimeJitterSlider.setTooltip( "This sets the overall probability of different divisions being included in the rhythmic pattern" );
     transpositionJitterSlider.sendLookAndFeelChange();
-    
+    transpositionJitterSlider.setTextValueSuffix( "%" );
 
+    addAndMakeVisible( &harmonyDislayBox );
+    for ( auto i = 0; i < MAX_N_HARMONIES; i++ )
+    {
+        addAndMakeVisible( &harmonySliders[ i ] );
+        harmonySliders[ i ].setSliderStyle( juce::Slider::Rotary );
+        harmonySlidersAttachments[ i ].reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "harmony" + juce::String( i ), harmonySliders[ i ] )  );
+        harmonySliders[ i ].setTextBoxStyle( juce::Slider::TextBoxBelow, false, harmonySliders[ i ].getWidth(), TEXT_HEIGHT );
+    //    delayTimeJitterSlider.setTooltip( "This sets the overall probability of different divisions being included in the rhythmic pattern" );
+        harmonySliders[ i ].sendLookAndFeelChange();
+        
+        
+        addAndMakeVisible( &harmonyButtons[ i ] );
+        harmonyButtonsAttachments[ i ].reset( new juce::AudioProcessorValueTreeState::ButtonAttachment( valueTreeState, "harmonyOn" + juce::String( i ), harmonyButtons[ i ] ) );
+        harmonyButtons[ i ].sendLookAndFeelChange();
+        
+        harmonyDislayBox.addItem( "harmony" + juce::String( i + 1 ), i+1 );
+    }
     
+    harmonyDislayBox.onChange = [ this ]
+    {
+        auto num = harmonyDislayBox.getSelectedId() - 1;
+        for ( auto i = 0; i < MAX_N_HARMONIES; i++ )
+        {
+            harmonySliders[ i ].setVisible( i == num  );
+            harmonyButtons[ i ].setVisible( i == num  );
+        }
+    };
     
+    harmonyDislayBox.setSelectedId( 1 );
     
     
     
@@ -154,6 +197,7 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     reverseSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, reverseSlider.getWidth(), TEXT_HEIGHT );
 //    reverseSlider.setTooltip( "This sets the overall probability of different divisions being included in the rhythmic pattern" );
     reverseSlider.sendLookAndFeelChange();
+    reverseSlider.setTextValueSuffix( "%" );
     
     addAndMakeVisible( &repeatSlider );
     repeatSlider.setSliderStyle( juce::Slider::Rotary );
@@ -161,6 +205,7 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     repeatSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, repeatSlider.getWidth(), TEXT_HEIGHT );
 //    repeatSlider.setTooltip( "This sets the overall probability of different divisions being included in the rhythmic pattern" );
     repeatSlider.sendLookAndFeelChange();
+    repeatSlider.setTextValueSuffix( "%" );
     
 
     addAndMakeVisible( &crossTalkSlider );
@@ -169,6 +214,7 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     crossTalkSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, crossTalkSlider.getWidth(), TEXT_HEIGHT );
 //    repeatSlider.setTooltip( "This sets the overall probability of different divisions being included in the rhythmic pattern" );
     crossTalkSlider.sendLookAndFeelChange();
+    crossTalkSlider.setTextValueSuffix( "%" );
     
     addAndMakeVisible( &densitySlider );
     densitySlider.setSliderStyle( juce::Slider::Rotary );
@@ -176,7 +222,7 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     densitySlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, densitySlider.getWidth(), TEXT_HEIGHT );
 //    repeatSlider.setTooltip( "This sets the overall probability of different divisions being included in the rhythmic pattern" );
     densitySlider.sendLookAndFeelChange();
-    
+    densitySlider.setTextValueSuffix( "%" );
 
     addAndMakeVisible( &bitCrushButton );
     bitCrushButton.setButtonText( "bitCrush" );
@@ -189,24 +235,87 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     
 //    bitDepthSlider, srDividerSlider
     addAndMakeVisible( &bitDepthSlider );
-    bitDepthSlider.setSliderStyle( juce::Slider::Rotary );
+    bitDepthSlider.setTextValueSuffix( " bits" );
+//    bitDepthSlider.setSliderStyle( juce::Slider::Rotary );
     bitDepthSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "bitDepth", bitDepthSlider )  );
-    bitDepthSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, bitDepthSlider.getWidth(), TEXT_HEIGHT );
+//    bitDepthSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, bitDepthSlider.getWidth(), TEXT_HEIGHT );
 //    reverseSlider.setTooltip( "This sets the overall probability of different divisions being included in the rhythmic pattern" );
     bitDepthSlider.sendLookAndFeelChange();
     
     addAndMakeVisible( &srDividerSlider );
-    srDividerSlider.setSliderStyle( juce::Slider::Rotary );
+//    srDividerSlider.setSliderStyle( juce::Slider::Rotary );
     srDividerSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "sampleRateDivider", srDividerSlider )  );
-    srDividerSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, reverseSlider.getWidth(), TEXT_HEIGHT );
+//    srDividerSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, reverseSlider.getWidth(), TEXT_HEIGHT );
 //    reverseSlider.setTooltip( "This sets the overall probability of different divisions being included in the rhythmic pattern" );
     srDividerSlider.sendLookAndFeelChange();
+    srDividerSlider.setTextValueSuffix(" srDiv");
     
+    
+
+    
+    addAndMakeVisible( &filterFreqSlider );
+    filterFreqSlider.setTextValueSuffix( "Hz" );
+    filterFreqSlider.setSliderStyle( juce::Slider::Rotary );
+    filterFreqSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "filterFrequency", filterFreqSlider )  );
+    filterFreqSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, bitDepthSlider.getWidth(), TEXT_HEIGHT );
+//    reverseSlider.setTooltip( "This sets the overall probability of different divisions being included in the rhythmic pattern" );
+    filterFreqSlider.sendLookAndFeelChange();
+    
+    
+    addAndMakeVisible( &filterQSlider );
+    filterQSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "filterQ", filterQSlider )  );
+    filterQSlider.setTextValueSuffix( "Q" );
+    
+    auto filterTypes = audioProcessor.getFilterTypes();
+    addAndMakeVisible( &filterTypeBox );
+    for ( auto i = 0; i < filterTypes.size(); i++ )
+        filterTypeBox.addItem( filterTypes[ i ], i + 1 );
+    filterTypeBoxAttachment.reset( new juce::AudioProcessorValueTreeState::ComboBoxAttachment  ( valueTreeState, "filterType", filterTypeBox )  );
+    filterTypeBox.sendLookAndFeelChange();
+    
+    addAndMakeVisible( &filterButton );
+    filterButtonAttachment.reset( new juce::AudioProcessorValueTreeState::ButtonAttachment( valueTreeState, "filterActive", filterButton ) );
+    filterButton.setButtonText( "filter" );
+    
+    
+    addAndMakeVisible( &outputModeBox );
+    outputModeBox.addItem( "mix", 1 );
+    outputModeBox.addItem( "insert", 2 );
+    outputModeBox.addItem( "gate", 3 );
+    outputModeBoxAttachment.reset( new juce::AudioProcessorValueTreeState::ComboBoxAttachment  ( valueTreeState, "outMode", outputModeBox )  );
+    outputModeBox.sendLookAndFeelChange();
+    outputModeBox.onChange = [this]
+    {
+        outmodeDisplay();
+    };
+    
+    addAndMakeVisible( &mixSlider );
+    mixSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "mix", mixSlider )  );
+    mixSlider.sendLookAndFeelChange();
+    mixSlider.setTextValueSuffix( "%" );
+    
+    
+    addAndMakeVisible( &interpolationTypeBox );
+    for ( auto i = 0; i < interpNames.size(); i++ )
+        interpolationTypeBox.addItem( interpNames[ i ], i+1 );
+    interpolationTypeBoxAttachment.reset( new juce::AudioProcessorValueTreeState::ComboBoxAttachment  ( valueTreeState, "interpolation", interpolationTypeBox )  );
+    interpolationTypeBox.sendLookAndFeelChange();
+    
+    addAndMakeVisible( &outputLevelSlider );
+    outputLevelSlider.setSliderStyle( juce::Slider::Rotary );
+    outputLevelSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, outputLevelSlider.getWidth(), TEXT_HEIGHT );
+    outputLevelSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "outputLevel", outputLevelSlider )  );
+//    outputLevelSlider.setSkewFactorFromMidPoint( -6.0 );
+    outputLevelSlider.setNumDecimalPlacesToDisplay( 1 );
+    outputLevelSlider.sendLookAndFeelChange();
+    outputLevelSlider.setTextValueSuffix( "dB" );
     
     
     delayTimeDisplay();
     jitterDisplayDisplay();
     rateDisplay();
+    crushDisplay();
+    outmodeDisplay();
     
     setSize ( WIDTH, HEIGHT );
 }
@@ -233,6 +342,8 @@ void Sjf_mincerAudioProcessorEditor::paint (juce::Graphics& g)
     g.drawFittedText ("sjf_mincer", 0, 0, getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
     
     g.drawFittedText ("delayTime", delayTimeSyncButton.getX(), delayTimeSyncButton.getY() - TEXT_HEIGHT, delayTimeSyncButton.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
+    
+//    g.drawFittedText ("offset", delaySyncOffsetSlider.getX(), delaySyncOffsetSlider.getY() - TEXT_HEIGHT, delaySyncOffsetSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
     g.drawFittedText ("dtJitter", delayTimeJitterSyncButton.getX(), delayTimeJitterSyncButton.getY() - TEXT_HEIGHT, delayTimeJitterSyncButton.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
     g.drawFittedText ("rate", rateSyncButton.getX(), rateSyncButton.getY() - TEXT_HEIGHT, rateSyncButton.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
     
@@ -247,7 +358,13 @@ void Sjf_mincerAudioProcessorEditor::paint (juce::Graphics& g)
     g.drawFittedText ("repeat", repeatSlider.getX(), repeatSlider.getY() - TEXT_HEIGHT, repeatSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
     
     
+//    g.drawFittedText ("bitDepth", bitDepthSlider.getX(), bitDepthSlider.getY() - TEXT_HEIGHT, bitDepthSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
+//    g.drawFittedText ("SR Divider", srDividerSlider.getX(), srDividerSlider.getY() - TEXT_HEIGHT, srDividerSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
+    
+    
     g.drawFittedText ("feedback", feedbackSlider.getX(), feedbackSlider.getY() - TEXT_HEIGHT, feedbackSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
+    
+    g.drawFittedText ("output", outputLevelSlider.getX(), outputLevelSlider.getY() - TEXT_HEIGHT, outputLevelSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
 }
 
 void Sjf_mincerAudioProcessorEditor::resized()
@@ -255,31 +372,61 @@ void Sjf_mincerAudioProcessorEditor::resized()
     delayTimeSyncButton.setBounds( INDENT, TEXT_HEIGHT*2, SLIDERSIZE, TEXT_HEIGHT );
     
     delayTimeSlider.setBounds( delayTimeSyncButton.getX(), delayTimeSyncButton.getBottom(), SLIDERSIZE, SLIDERSIZE );
-    delayTimeSyncDivisionNumberSlider.setBounds( delayTimeSyncButton.getX(), delayTimeSyncButton.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
-    delayTimeSyncDivisionBox.setBounds( delayTimeSyncDivisionNumberSlider.getX(), delayTimeSyncDivisionNumberSlider.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
-    delaySyncOffsetSlider.setBounds( delayTimeSyncDivisionBox.getX(), delayTimeSyncDivisionBox.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
-    
-    feedbackSlider.setBounds( delayTimeSyncDivisionBox.getX(), delayTimeSlider.getBottom() + TEXT_HEIGHT, SLIDERSIZE, SLIDERSIZE );
-    
-    delayTimeJitterSyncButton.setBounds( delayTimeSyncButton.getRight()+INDENT, delayTimeSyncButton.getY(), SLIDERSIZE, TEXT_HEIGHT );
+    delayTimeSyncDivisionNumberSlider.setBounds( delayTimeSyncButton.getX(), delayTimeSyncButton.getBottom(), SLIDERSIZE / 2, SLIDERSIZE / 2 );
+    delayTimeSyncDivisionBox.setBounds( delayTimeSyncDivisionNumberSlider.getRight(), delayTimeSyncDivisionNumberSlider.getY(), SLIDERSIZE / 2, SLIDERSIZE / 2  );
+    delaySyncOffsetSlider.setBounds( delayTimeSlider.getX(), delayTimeSyncDivisionBox.getBottom()+TEXT_HEIGHT+INDENT/2, SLIDERSIZE, TEXT_HEIGHT   );
+
+    delayTimeJitterSyncButton.setBounds( delayTimeSyncButton.getX(), delayTimeSlider.getBottom() + TEXT_HEIGHT, SLIDERSIZE, TEXT_HEIGHT );
     delayTimeJitterSlider.setBounds( delayTimeJitterSyncButton.getX(), delayTimeJitterSyncButton.getBottom(), SLIDERSIZE, SLIDERSIZE );
-    delaySyncJitterNDivisionsSlider.setBounds( delayTimeJitterSlider.getX(), delayTimeJitterSlider.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
-    delaySyncJitterDivisionBox.setBounds( delaySyncJitterNDivisionsSlider.getX(), delaySyncJitterNDivisionsSlider.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
+    delaySyncJitterNDivisionsSlider.setBounds( delayTimeJitterSlider.getX(), delayTimeJitterSlider.getBottom(), SLIDERSIZE / 2, TEXT_HEIGHT );
+    delaySyncJitterDivisionBox.setBounds( delaySyncJitterNDivisionsSlider.getRight(), delaySyncJitterNDivisionsSlider.getY(), SLIDERSIZE / 2, TEXT_HEIGHT );
+
+//    auto fbSlY = ( delaySyncJitterDivisionBox.getBottom() - delayTimeSlider.getY() ) / 2;
+    feedbackSlider.setBounds( delayTimeSlider.getRight()+INDENT, delayTimeSlider.getY(), SLIDERSIZE, SLIDERSIZE );
+    feedbackControlButton.setBounds( feedbackSlider.getRight() - TEXT_HEIGHT, feedbackSlider.getY(), TEXT_HEIGHT, TEXT_HEIGHT );
+    
+    
+    rateSyncButton.setBounds( feedbackSlider.getX(), delayTimeJitterSyncButton.getY(), SLIDERSIZE, TEXT_HEIGHT );
+    rateSlider.setBounds( rateSyncButton.getX(), rateSyncButton.getBottom(), SLIDERSIZE, SLIDERSIZE );
+    rateSyncNumDivisionsSlider.setBounds( rateSyncButton.getX(), rateSyncButton.getBottom(), SLIDERSIZE / 2, SLIDERSIZE / 2 );
+    rateSyncDivisionBox.setBounds( rateSyncNumDivisionsSlider.getRight(), rateSyncNumDivisionsSlider.getY(), SLIDERSIZE / 2, SLIDERSIZE / 2 );
+    
+    transpositionSlider.setBounds( rateSyncButton.getRight()+INDENT*2, delayTimeSlider.getY(), SLIDERSIZE, SLIDERSIZE );
+    transpositionJitterSlider.setBounds( transpositionSlider.getRight() + INDENT, transpositionSlider.getY(), SLIDERSIZE, SLIDERSIZE );
+    
+    harmonyDislayBox.setBounds( transpositionSlider.getX() + SLIDERSIZE/2 + INDENT/2, rateSyncButton.getY(), SLIDERSIZE, TEXT_HEIGHT );
+    for ( auto i = 0; i < MAX_N_HARMONIES; i++ )
+    {
+        harmonySliders[ i ].setBounds( harmonyDislayBox.getX(), harmonyDislayBox.getBottom(), SLIDERSIZE, SLIDERSIZE );
+        harmonyButtons[ i ].setBounds( harmonySliders[ i ].getRight() - TEXT_HEIGHT, harmonySliders[ i ].getY(), TEXT_HEIGHT, TEXT_HEIGHT );
+    }
+
+    crossTalkSlider.setBounds( transpositionJitterSlider.getRight()+INDENT*2, transpositionSlider.getY(), SLIDERSIZE, SLIDERSIZE );
+    densitySlider.setBounds( crossTalkSlider.getRight()+INDENT, crossTalkSlider.getY(), SLIDERSIZE, SLIDERSIZE );
+
+
+    reverseSlider.setBounds( crossTalkSlider.getX(), harmonyDislayBox.getBottom(), SLIDERSIZE, SLIDERSIZE );
+    repeatSlider.setBounds( densitySlider.getX(), reverseSlider.getY(), SLIDERSIZE, SLIDERSIZE );
+
+
+    bitCrushButton.setBounds( densitySlider.getRight() + INDENT*2, densitySlider.getY(), SLIDERSIZE, TEXT_HEIGHT );
+    bitDepthSlider.setBounds( bitCrushButton.getX(), bitCrushButton.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
+    srDividerSlider.setBounds( bitDepthSlider.getX(), bitDepthSlider.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
 
     
-    rateSyncButton.setBounds( delayTimeJitterSyncButton.getRight()+INDENT, delayTimeJitterSyncButton.getY(), SLIDERSIZE, TEXT_HEIGHT );
-    rateSlider.setBounds( rateSyncButton.getX(), rateSyncButton.getBottom(), SLIDERSIZE, SLIDERSIZE );
-    rateSyncNumDivisionsSlider.setBounds( rateSyncButton.getX(), rateSyncButton.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
-    rateSyncDivisionBox.setBounds( rateSyncNumDivisionsSlider.getX(), rateSyncNumDivisionsSlider.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
-    
-    transpositionSlider.setBounds( rateSyncButton.getRight()+INDENT, rateSyncButton.getY(), SLIDERSIZE, SLIDERSIZE );
-    transpositionJitterSlider.setBounds( transpositionSlider.getX(), transpositionSlider.getBottom()+TEXT_HEIGHT, SLIDERSIZE, SLIDERSIZE );
+    filterButton.setBounds( srDividerSlider.getX(), srDividerSlider.getBottom() + TEXT_HEIGHT, SLIDERSIZE, TEXT_HEIGHT );
+    filterTypeBox.setBounds( filterButton.getX(), filterButton.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
+    filterFreqSlider.setBounds( filterTypeBox.getX(), filterTypeBox.getBottom(), SLIDERSIZE, SLIDERSIZE );
+    filterQSlider.setBounds( filterFreqSlider.getX(), filterFreqSlider.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
     
     
-    crossTalkSlider.setBounds( transpositionSlider.getRight()+INDENT, transpositionSlider.getY(), SLIDERSIZE, SLIDERSIZE );
-    densitySlider.setBounds( crossTalkSlider.getRight()+INDENT, crossTalkSlider.getY(), SLIDERSIZE, SLIDERSIZE );
+    outputLevelSlider.setBounds( bitCrushButton.getRight()+INDENT*2, bitCrushButton.getY()+TEXT_HEIGHT, SLIDERSIZE, SLIDERSIZE );
+        
+    outputModeBox.setBounds( outputLevelSlider.getX(), outputLevelSlider.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
+    mixSlider.setBounds( outputModeBox.getX(), outputModeBox.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
+
+    interpolationTypeBox.setBounds( mixSlider.getX(), mixSlider.getBottom()+TEXT_HEIGHT, SLIDERSIZE, TEXT_HEIGHT );
+
     
-    
-    reverseSlider.setBounds( crossTalkSlider.getX(), crossTalkSlider.getBottom() + TEXT_HEIGHT, SLIDERSIZE, SLIDERSIZE );
-    repeatSlider.setBounds( densitySlider.getX(), densitySlider.getBottom() + TEXT_HEIGHT, SLIDERSIZE, SLIDERSIZE );
+
 }

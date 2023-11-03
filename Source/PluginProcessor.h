@@ -11,15 +11,24 @@
 #include <JuceHeader.h>
 #include "../sjf_audio/sjf_granularDelay.h"
 #include "../sjf_audio/sjf_audioUtilitiesC++.h"
+#include "../sjf_audio/sjf_biquadCalculator.h"
 //==============================================================================
 /**
 */
+#define MAX_N_HARMONIES 4
 class Sjf_mincerAudioProcessor  : public juce::AudioProcessor
                             #if JucePlugin_Enable_ARA
                              , public juce::AudioProcessorARAExtension
                             #endif
 {
+private:
+    const std::array< std::string, 7 > interpNames = { "linear", "cubic", "pureData", "fourthOrder", "godot", "hermite", "allpass" };
+//    const std::array< std::string, 8 > filterTypes = { "lowpass" == 1, "highpass", "allpass", "lowshelf", "highshelf", "bandpass", "bandcut", "peak" };
+    const std::array< std::string, 3 > filterTypes = { "lowpass", "highpass", "bandpass" };
+    
 public:
+//    static constexpr int MAX_N_HARMONIES = 4;
+    
     //==============================================================================
     Sjf_mincerAudioProcessor();
     ~Sjf_mincerAudioProcessor() override;
@@ -60,6 +69,10 @@ public:
     
     auto getDivNames( ){ return m_divNames.getAllNames(); }
     
+    auto getInterpNames(){ return interpNames; }
+    
+    auto getFilterTypes(){ return filterTypes; }
+    
 private:
     //==============================================================================
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
@@ -67,7 +80,8 @@ private:
     
     void setParameters();
     
-    static constexpr int MAX_N_HARMONIES = 4;
+//    static constexpr int MAX_N_HARMONIES = 4;
+    
     
     juce::AudioPlayHead* playHead;
     juce::AudioPlayHead::PositionInfo positionInfo;
@@ -113,6 +127,14 @@ private:
     std::atomic<float>* bitDepthParameter = nullptr;
     std::atomic<float>* srDividerParameter = nullptr;
     
+    
+//    m_granDel.setFilter(<#float f#>, <#float q#>, <#int type#>, <#bool trueIfFirstOrder#>, <#bool filterIsActive#>)
+    std::atomic<float>* filterFreqParameter = nullptr;
+    std::atomic<float>* filterQParameter = nullptr;
+    std::atomic<float>* filterTypeParameter = nullptr;
+    std::atomic<float>* filterOrderParameter = nullptr;
+    std::atomic<float>* filterActiveParameter = nullptr;
+    
     std::atomic<float>* crossTalkParameter = nullptr;
     
     
@@ -123,12 +145,13 @@ private:
     std::atomic<float>* interpolationTypeParameter = nullptr;
     
     
-
-    
+    std::atomic<float>* outLevelParameter = nullptr;
     
     
     sjf_granularDelay< 16, MAX_N_HARMONIES > m_granDel;
+    
     static constexpr int NDIVLEVELS = 8;
     sjf_divNames< NDIVLEVELS > m_divNames;
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Sjf_mincerAudioProcessor)
 };

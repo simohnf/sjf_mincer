@@ -58,6 +58,13 @@ Sjf_mincerAudioProcessor::Sjf_mincerAudioProcessor()
     bitDepthParameter = parameters.getRawParameterValue( "bitDepth" );
     srDividerParameter = parameters.getRawParameterValue( "sampleRateDivider" );
     
+    filterFreqParameter = parameters.getRawParameterValue( "filterFrequency" );
+    filterQParameter = parameters.getRawParameterValue( "filterQ" );
+    filterTypeParameter = parameters.getRawParameterValue( "filterType" );
+    filterOrderParameter = parameters.getRawParameterValue( "filterOrder" );
+    filterActiveParameter = parameters.getRawParameterValue( "filterActive" );
+    
+    
     rateParameter = parameters.getRawParameterValue( "rate" );
     
     rateSyncParameter = parameters.getRawParameterValue( "rateSync" );
@@ -72,6 +79,8 @@ Sjf_mincerAudioProcessor::Sjf_mincerAudioProcessor()
     
     
     interpolationTypeParameter = parameters.getRawParameterValue( "interpolation" );
+    
+    outLevelParameter = parameters.getRawParameterValue( "outputLevel" );
     
 }
 
@@ -194,7 +203,6 @@ void Sjf_mincerAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
 
     
     m_granDel.process( buffer );
-
 }
 
 //==============================================================================
@@ -307,6 +315,25 @@ void Sjf_mincerAudioProcessor::setParameters()
     
     
     m_granDel.setInterpolationType( *interpolationTypeParameter + 1);
+    
+    auto type = 0;
+    switch ( static_cast< int >(*filterTypeParameter) ) {
+        case 0 :
+            type = sjf_biquadCalculator< float >::filterType::lowpass;
+            break;
+        case 1:
+            type = sjf_biquadCalculator< float >::filterType::highpass;
+            break;
+        case 2:
+            type = sjf_biquadCalculator< float >::filterType::bandpass;
+            break;
+        default:
+            type = sjf_biquadCalculator< float >::filterType::lowpass;
+            break;
+    }
+    m_granDel.setFilter( *filterFreqParameter, *filterQParameter, type, *filterOrderParameter, *filterActiveParameter );
+    
+    m_granDel.setOutputLevel( *outLevelParameter );
 }
 
 
@@ -322,39 +349,38 @@ juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::cr
     
     auto dn = temp.getAllNames();
     juce::StringArray divNames;
+    auto eightNoteIndex = 0;
     for ( auto i = 0; i < dn.size(); i++ )
+    {
+        if ( dn[i] == "/8n")
+            eightNoteIndex= i;
         divNames.add( juce::String( dn[ i ] ) );
-    
+    }
+
     auto range = juce::NormalisableRange< float > ( 0, 10000 );
-    auto attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); })
-                                                     .withLabel ("ms");
+    auto attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("ms");
     // delay time parameters
     params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "delayTimeSync", pIDVersionNumber }, "DelayTimeSync", false ) );
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "delayTime", pIDVersionNumber }, "DelayTime", range, 500, attributes ) );
 
     params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "numDivisions", pIDVersionNumber }, "NumDivision", 1, 128, 1 ) );
-    params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "division", pIDVersionNumber }, "Division", divNames, 0 ) );
-//    params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "division", pIDVersionNumber }, "Division",  1, 128, 4 ) );
+    params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "division", pIDVersionNumber }, "Division", divNames, eightNoteIndex ) );
 
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "syncOffset", pIDVersionNumber }, "SyncOffset", -33.3333, 33.3333, 0 ) );
     
     range = juce::NormalisableRange< float > ( 0, 100 );
-    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); })
-                                                     .withLabel ("%");
+    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("%");
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "feedback", pIDVersionNumber }, "Feedback", range, 0, attributes ) );
     params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "feedbackControl", pIDVersionNumber }, "feedbackControl", false ) );
     
     
     range = juce::NormalisableRange< float > ( 0, 100 );
-    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); })
-                                                     .withLabel ("%");
+    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("%");
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "delayTimeJitter", pIDVersionNumber }, "DelayTimeJitter", range, 0, attributes ) );
     params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "syncJitter" , pIDVersionNumber }, "SyncJitter" , false ) );
     
     params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "syncedJitterMaxNumDivisions", pIDVersionNumber }, "SyncedJitterMaxNumDivisions",  1, 128, 16 ) );
-    params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "syncedJitterDivision", pIDVersionNumber }, "SyncedJitterDivision", divNames, 0 ) );
-//    params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "syncedJitterDivision", pIDVersionNumber }, "SyncedJitterDivision",  1, 128, 16 ) );
-
+    params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "syncedJitterDivision", pIDVersionNumber }, "SyncedJitterDivision", divNames, eightNoteIndex ) );
     
     
     
@@ -368,8 +394,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::cr
     
     
     range = juce::NormalisableRange< float > ( 0, 100 );
-    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); })
-                                                     .withLabel ("%");
+    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("%");
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "transpositionJitter", pIDVersionNumber }, "TranspositionJitter", range, 0, attributes ) );
     
     
@@ -381,17 +406,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::cr
     params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "rateSync", pIDVersionNumber }, "RateSync", false ) );
     
     range = juce::NormalisableRange< float > ( 1, 100 );
-    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); })
-                                                     .withLabel ("Hz");
-    params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "rate", pIDVersionNumber }, "Rate", range, 1, attributes ) );
+    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("Hz");
+    params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "rate", pIDVersionNumber }, "Rate", range, 10, attributes ) );
     params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "rateSyncNumDivisions", pIDVersionNumber }, "RateSyncNumDivisions", 1, 128, 1 ) );
-    params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "rateSyncDivision", pIDVersionNumber }, "RateSyncDivision", divNames, 0 ) );
-//    params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "rateSyncDivision", pIDVersionNumber }, "RateSyncDivision", 1, 128, 16 ) );
+    params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "rateSyncDivision", pIDVersionNumber }, "RateSyncDivision", divNames, eightNoteIndex ) );
     
 
     range = juce::NormalisableRange< float > ( 0, 100 );
-    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); })
-                                                     .withLabel ("%");
+    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("%");
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "reverse", pIDVersionNumber }, "Reverse", range, 0, attributes ) );
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "repeat", pIDVersionNumber }, "Repeat", range, 0, attributes ) );
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "crossTalk", pIDVersionNumber }, "CrossTalk", range, 0, attributes ) );
@@ -402,18 +424,39 @@ juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::cr
     params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "bitDepth", pIDVersionNumber }, "BitDepth", 1, 16, 16 ) );
     params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "sampleRateDivider", pIDVersionNumber }, "SampleRateDivider", 1, 16, 1 ) );
     
+    params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "filterActive", pIDVersionNumber }, "FilterActive", false ) );
+    range = juce::NormalisableRange< float > ( 20, 10000 );
+    range.setSkewForCentre( 1000 );
+    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("Hz");
+    params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "filterFrequency", pIDVersionNumber }, "FilterFrequency", range, 1000, attributes ) );
+    params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "filterQ", pIDVersionNumber }, "FilterQ", 0.01, 10, 1 ) );
+    juce::StringArray filtTypes;
+    for ( auto i = 0; i < filterTypes.size(); i++ )
+        filtTypes.add( filterTypes[ i ] );
+    params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "filterType", pIDVersionNumber }, "FilterType", filtTypes, 0 ) );
+    params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "filterOrder", pIDVersionNumber }, "FilterOrder", false ) );
+//    filterOrderParameter = parameters.getRawParameterValue( "filterOrder" );
+    
+    
     
     params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "outMode", pIDVersionNumber }, "OutMode", juce::StringArray { "Mix", "Insert", "Gate" }, 0 ) );
-//    params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "outMode", pIDVersionNumber }, "OutMode", 0, 2, 0 ) );
     
     range = juce::NormalisableRange< float > ( 0, 100 );
-    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); })
-                                                     .withLabel ("%");
+    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("%");
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "density", pIDVersionNumber }, "Density", range, 100, attributes ) );
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "mix", pIDVersionNumber }, "Mix", range, 100, attributes ) );
     
+    juce::StringArray intNames;
+    for ( auto i = 0; i < interpNames.size(); i++ )
+        intNames.add( interpNames[ i ] );
+    params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "interpolation", pIDVersionNumber }, "Interpolation", intNames, 0 ) );
     
-    //        { linear = 1, cubic, pureData, fourthOrder, godot, hermite, allpass };
-    params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "interpolation", pIDVersionNumber }, "Interpolation", juce::StringArray { "linear", "cubic", "pureData", "fourthOrder", "godot", "hermite", "allpass" }, 0 ) );
+//    range = juce::NormalisableRange< float > ( -120, 6 );
+    range = juce::NormalisableRange< float >( -100.0, 0, 0.1 );
+    range.setSkewForCentre( -6);
+    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("dB");
+
+    params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "outputLevel", pIDVersionNumber }, "OutputLevel", range, 0.0, attributes ) );
+    
     return params;
 }

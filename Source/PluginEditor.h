@@ -108,9 +108,29 @@ private:
     
     void crushDisplay()
     {
-        
+        if ( bitCrushButton.getToggleState() )
+        {
+            bitDepthSlider.setVisible( true );
+            srDividerSlider.setVisible( true );
+        }
+        else
+        {
+            bitDepthSlider.setVisible( false );
+            srDividerSlider.setVisible( false );
+        }
     }
     
+    void outmodeDisplay()
+    {
+        if ( outputModeBox.getSelectedId() == 1 )
+        {
+            mixSlider.setVisible( true );
+        }
+        else
+        {
+            mixSlider.setVisible( false );
+        }
+    }
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     Sjf_mincerAudioProcessor& audioProcessor;
@@ -118,25 +138,31 @@ private:
     
     
     juce::Slider delayTimeSlider, delayTimeJitterSlider, feedbackSlider,
-        rateSlider, reverseSlider, repeatSlider, crossTalkSlider, densitySlider, mixSlider,
-        transpositionSlider, transpositionJitterSlider,
-        bitDepthSlider, srDividerSlider;
+        rateSlider, reverseSlider, repeatSlider, crossTalkSlider, densitySlider,
+        transpositionSlider, transpositionJitterSlider, outputLevelSlider, filterFreqSlider;
+    
+//    static constexpr int maxNHarmonies = audioProcessor.MAX_N_HARMONIES;
+    std::array< juce::Slider, MAX_N_HARMONIES > harmonySliders;
+    std::array< juce::ToggleButton, MAX_N_HARMONIES > harmonyButtons;
+    std::array< std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>, MAX_N_HARMONIES > harmonySlidersAttachments;
+    std::array< std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>, MAX_N_HARMONIES > harmonyButtonsAttachments;
+    
+    sjf_numBox delayTimeSyncDivisionNumberSlider, delaySyncOffsetSlider, rateSyncNumDivisionsSlider, delaySyncJitterNDivisionsSlider, bitDepthSlider, srDividerSlider, mixSlider, filterQSlider;
+    
+    juce::ToggleButton delayTimeSyncButton, delayTimeJitterSyncButton, feedbackControlButton, rateSyncButton, bitCrushButton, filterButton;
     
     
-    sjf_numBox delayTimeSyncDivisionNumberSlider, delaySyncOffsetSlider, rateSyncNumDivisionsSlider, delaySyncJitterNDivisionsSlider;
+    juce::ComboBox outputModeBox, interpolationTypeBox, rateSyncDivisionBox, delayTimeSyncDivisionBox, delaySyncJitterDivisionBox, harmonyDislayBox, filterTypeBox;
     
-    juce::ToggleButton delayTimeSyncButton, delayTimeJitterSyncButton, feedbackControlButton, rateSyncButton, bitCrushButton;
-    
-    
-    juce::ComboBox outputModeBox, interpolationTypeBox, rateSyncDivisionBox, delayTimeSyncDivisionBox, delaySyncJitterDivisionBox;
-    
-    std::unique_ptr< juce::AudioProcessorValueTreeState::SliderAttachment > delayTimeSliderAttachment, delayTimeJitterSliderAttachment, feedbackSliderAttachment, reverseSliderAttachment, repeatSliderAttachment, delayTimeSyncDivisionNumberAttachment, delaySyncOffsetSliderAttachment, delaySyncJitterNDivisionsSliderAttachment, rateSliderAttachment, rateSyncNumDivisionsSliderAttachment, transpositionSliderAttachment, transpositionJitterSliderAttachment, crossTalkSliderAttachment, densitySliderAttachment, bitDepthSliderAttachment, srDividerSliderAttachment;
+    std::unique_ptr< juce::AudioProcessorValueTreeState::SliderAttachment > delayTimeSliderAttachment, delayTimeJitterSliderAttachment, feedbackSliderAttachment, reverseSliderAttachment, repeatSliderAttachment, delayTimeSyncDivisionNumberAttachment, delaySyncOffsetSliderAttachment, delaySyncJitterNDivisionsSliderAttachment, rateSliderAttachment, rateSyncNumDivisionsSliderAttachment, transpositionSliderAttachment, transpositionJitterSliderAttachment, crossTalkSliderAttachment, densitySliderAttachment, bitDepthSliderAttachment, srDividerSliderAttachment, mixSliderAttachment, outputLevelSliderAttachment, filterFreqSliderAttachment, filterQSliderAttachment;
     
     
-    std::unique_ptr< juce::AudioProcessorValueTreeState::ComboBoxAttachment > outputModeBoxAttachment, interpolationTypeBoxAttachment, rateSyncDivisionBoxAttachment, delayTimeSyncDivisionBoxAttachment, delaySyncJitterDivisionBoxAttachment;
+    std::unique_ptr< juce::AudioProcessorValueTreeState::ComboBoxAttachment > outputModeBoxAttachment, interpolationTypeBoxAttachment, rateSyncDivisionBoxAttachment, delayTimeSyncDivisionBoxAttachment, delaySyncJitterDivisionBoxAttachment, filterTypeBoxAttachment;
     
-    std::unique_ptr< juce::AudioProcessorValueTreeState::ButtonAttachment > delayTimeSyncButtonAttachment, delayTimeJitterSyncButtonAttachment, feedbackControlButtonAttachment, rateSyncButtonAttachment, bitCrushButtonAttachment;
+    std::unique_ptr< juce::AudioProcessorValueTreeState::ButtonAttachment > delayTimeSyncButtonAttachment, delayTimeJitterSyncButtonAttachment, feedbackControlButtonAttachment, rateSyncButtonAttachment, bitCrushButtonAttachment, filterButtonAttachment;
 
+    
+    juce::Label offsetLabel;
     
     sjf_lookAndFeel otherLookAndFeel;
     
