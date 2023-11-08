@@ -61,8 +61,17 @@ Sjf_mincerAudioProcessor::Sjf_mincerAudioProcessor()
     filterFreqParameter = parameters.getRawParameterValue( "filterFrequency" );
     filterQParameter = parameters.getRawParameterValue( "filterQ" );
     filterTypeParameter = parameters.getRawParameterValue( "filterType" );
-    filterOrderParameter = parameters.getRawParameterValue( "filterOrder" );
-    filterActiveParameter = parameters.getRawParameterValue( "filterActive" );
+    filterActiveParameter = parameters.getRawParameterValue( "filter" );
+    
+    filterJitterParameter = parameters.getRawParameterValue( "filterJitter" );
+    
+    
+    ringModActiveParameter = parameters.getRawParameterValue( "ringMod");
+    ringModFreqParameter = parameters.getRawParameterValue( "ringModFreq");
+    ringModSpreadParameter = parameters.getRawParameterValue( "ringModSpread");
+    ringModMixParameter = parameters.getRawParameterValue( "ringModMix");
+    ringModJitterParameter = parameters.getRawParameterValue( "ringModJitter");
+    
     
     
     rateParameter = parameters.getRawParameterValue( "rate" );
@@ -199,9 +208,6 @@ void Sjf_mincerAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
         buffer.clear ( i, 0, buffer.getNumSamples() );
 
     setParameters();
-    
-
-    
     m_granDel.process( buffer );
 }
 
@@ -221,15 +227,17 @@ juce::AudioProcessorEditor* Sjf_mincerAudioProcessor::createEditor()
 //==============================================================================
 void Sjf_mincerAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    auto state = parameters.copyState();
+    std::unique_ptr<juce::XmlElement> xml (state.createXml());
+    copyXmlToBinary (*xml, destData);
 }
 
 void Sjf_mincerAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+    if (xmlState.get() != nullptr)
+        if (xmlState->hasTagName (parameters.state.getType()))
+            parameters.replaceState (juce::ValueTree::fromXml (*xmlState));
 }
 
 //==============================================================================
@@ -313,8 +321,8 @@ void Sjf_mincerAudioProcessor::setParameters()
     
     m_granDel.setOutputMode( *outputModeParameter );
     
-    
-    m_granDel.setInterpolationType( *interpolationTypeParameter + 1);
+    int inter = *interpolationTypeParameter;
+    m_granDel.setInterpolationType( inter + 1);
     
     auto type = 0;
     switch ( static_cast< int >(*filterTypeParameter) ) {
@@ -331,7 +339,12 @@ void Sjf_mincerAudioProcessor::setParameters()
             type = sjf_biquadCalculator< float >::filterType::lowpass;
             break;
     }
-    m_granDel.setFilter( *filterFreqParameter, *filterQParameter, type, *filterOrderParameter, *filterActiveParameter );
+    m_granDel.setFilter( *filterFreqParameter, *filterQParameter, type, *filterActiveParameter );
+    m_granDel.setFilterJitter( *filterJitterParameter );
+    
+    
+    m_granDel.setRingMod( *ringModFreqParameter, *ringModSpreadParameter, *ringModMixParameter, *ringModActiveParameter );
+    m_granDel.setRingModJitter( *ringModJitterParameter );
     
     m_granDel.setOutputLevel( *outLevelParameter );
 }
@@ -368,13 +381,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::cr
 
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "syncOffset", pIDVersionNumber }, "SyncOffset", -33.3333, 33.3333, 0 ) );
     
-    range = juce::NormalisableRange< float > ( 0, 100 );
+    range = juce::NormalisableRange< float > ( 0, 100, 0.1 );
     attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("%");
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "feedback", pIDVersionNumber }, "Feedback", range, 0, attributes ) );
     params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "feedbackControl", pIDVersionNumber }, "feedbackControl", false ) );
     
     
-    range = juce::NormalisableRange< float > ( 0, 100 );
+    range = juce::NormalisableRange< float > ( 0, 100, 0.1 );
     attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("%");
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "delayTimeJitter", pIDVersionNumber }, "DelayTimeJitter", range, 0, attributes ) );
     params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "syncJitter" , pIDVersionNumber }, "SyncJitter" , false ) );
@@ -393,7 +406,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::cr
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "transposition", pIDVersionNumber }, "Transposition", -12, 12, 0 ) );
     
     
-    range = juce::NormalisableRange< float > ( 0, 100 );
+    range = juce::NormalisableRange< float > ( 0, 100, 0.1 );
     attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("%");
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "transpositionJitter", pIDVersionNumber }, "TranspositionJitter", range, 0, attributes ) );
     
@@ -405,14 +418,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::cr
     // Grain Rate
     params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "rateSync", pIDVersionNumber }, "RateSync", false ) );
     
-    range = juce::NormalisableRange< float > ( 1, 100 );
+    range = juce::NormalisableRange< float > ( 1, 100, 0.1 );
     attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("Hz");
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "rate", pIDVersionNumber }, "Rate", range, 10, attributes ) );
     params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "rateSyncNumDivisions", pIDVersionNumber }, "RateSyncNumDivisions", 1, 128, 1 ) );
     params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "rateSyncDivision", pIDVersionNumber }, "RateSyncDivision", divNames, eightNoteIndex ) );
     
 
-    range = juce::NormalisableRange< float > ( 0, 100 );
+    range = juce::NormalisableRange< float > ( 0, 100, 0.1 );
     attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("%");
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "reverse", pIDVersionNumber }, "Reverse", range, 0, attributes ) );
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "repeat", pIDVersionNumber }, "Repeat", range, 0, attributes ) );
@@ -424,7 +437,21 @@ juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::cr
     params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "bitDepth", pIDVersionNumber }, "BitDepth", 1, 16, 16 ) );
     params.add( std::make_unique<juce::AudioParameterInt>( juce::ParameterID{ "sampleRateDivider", pIDVersionNumber }, "SampleRateDivider", 1, 16, 1 ) );
     
-    params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "filterActive", pIDVersionNumber }, "FilterActive", false ) );
+    
+    params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "ringMod", pIDVersionNumber }, "RingMod", false ) );
+    range = juce::NormalisableRange< float > ( 0.01, 10000 );
+    range.setSkewForCentre( 1000 );
+    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("Hz");
+    params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "ringModFreq", pIDVersionNumber }, "RingModFreq", range, 100, attributes ) );
+    range = juce::NormalisableRange< float > ( 0, 100, 0.1 );
+    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("%");
+    params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "ringModSpread", pIDVersionNumber }, "RingModSpread", range, 0, attributes ) );
+    params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "ringModMix", pIDVersionNumber }, "RingModMix", range, 50, attributes ) );
+    params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "ringModJitter", pIDVersionNumber }, "RingModJitter", range, 0, attributes ) );
+    
+    
+    
+    params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "filter", pIDVersionNumber }, "Filter", false ) );
     range = juce::NormalisableRange< float > ( 20, 10000 );
     range.setSkewForCentre( 1000 );
     attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("Hz");
@@ -434,22 +461,28 @@ juce::AudioProcessorValueTreeState::ParameterLayout Sjf_mincerAudioProcessor::cr
     for ( auto i = 0; i < filterTypes.size(); i++ )
         filtTypes.add( filterTypes[ i ] );
     params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "filterType", pIDVersionNumber }, "FilterType", filtTypes, 0 ) );
-    params.add( std::make_unique<juce::AudioParameterBool>( juce::ParameterID{ "filterOrder", pIDVersionNumber }, "FilterOrder", false ) );
-//    filterOrderParameter = parameters.getRawParameterValue( "filterOrder" );
     
-    
+//    filterJitter
+    range = juce::NormalisableRange< float > ( 0, 100, 0.1 );
+    attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("%");
+    params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "filterJitter", pIDVersionNumber }, "FilterJitter", range, 0, attributes ) );
     
     params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "outMode", pIDVersionNumber }, "OutMode", juce::StringArray { "Mix", "Insert", "Gate" }, 0 ) );
     
-    range = juce::NormalisableRange< float > ( 0, 100 );
+    range = juce::NormalisableRange< float > ( 0, 100, 0.1 );
     attributes = juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (auto x, auto) { return juce::String (x); }).withLabel ("%");
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "density", pIDVersionNumber }, "Density", range, 100, attributes ) );
     params.add( std::make_unique<juce::AudioParameterFloat>( juce::ParameterID{ "mix", pIDVersionNumber }, "Mix", range, 100, attributes ) );
     
     juce::StringArray intNames;
+    int defaultInterp = 0;
     for ( auto i = 0; i < interpNames.size(); i++ )
+    {
+        if ( interpNames[ i ] == "hermite" )
+            defaultInterp = i;
         intNames.add( interpNames[ i ] );
-    params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "interpolation", pIDVersionNumber }, "Interpolation", intNames, 0 ) );
+    }
+    params.add( std::make_unique<juce::AudioParameterChoice> (juce::ParameterID{ "interpolation", pIDVersionNumber }, "Interpolation", intNames, defaultInterp ) );
     
 //    range = juce::NormalisableRange< float > ( -120, 6 );
     range = juce::NormalisableRange< float >( -100.0, 0, 0.1 );

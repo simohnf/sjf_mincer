@@ -3,7 +3,7 @@
 <JUCERPROJECT id="ft3HMb" name="sjf_mincer" projectType="audioplug" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1"
               companyWebsite="https://simohnf.github.io./" pluginFormats="buildAU,buildAUv3,buildVST3"
-              pluginManufacturer="sjf">
+              pluginManufacturer="sjf" pluginVST3Category="Fx">
   <MAINGROUP id="AHOuGv" name="sjf_mincer">
     <GROUP id="{AC41489E-8FE2-84C1-4160-F1A70E6BDFB9}" name="Source">
       <FILE id="khbhBs" name="PluginProcessor.cpp" compile="1" resource="0"

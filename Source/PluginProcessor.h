@@ -12,6 +12,7 @@
 #include "../sjf_audio/sjf_granularDelay.h"
 #include "../sjf_audio/sjf_audioUtilitiesC++.h"
 #include "../sjf_audio/sjf_biquadCalculator.h"
+
 //==============================================================================
 /**
 */
@@ -22,9 +23,9 @@ class Sjf_mincerAudioProcessor  : public juce::AudioProcessor
                             #endif
 {
 private:
-    const std::array< std::string, 7 > interpNames = { "linear", "cubic", "pureData", "fourthOrder", "godot", "hermite", "allpass" };
+    const std::array< std::string, 6 > interpNames = { "linear", "cubic", "pureData", "fourthOrder", "godot", "hermite" };
 //    const std::array< std::string, 8 > filterTypes = { "lowpass" == 1, "highpass", "allpass", "lowshelf", "highshelf", "bandpass", "bandcut", "peak" };
-    const std::array< std::string, 3 > filterTypes = { "lowpass", "highpass", "bandpass" };
+    const std::array< std::string, 3 > filterTypes = { "lp", "hp", "bp" };
     
 public:
 //    static constexpr int MAX_N_HARMONIES = 4;
@@ -112,10 +113,6 @@ private:
     
     
     
-    std::atomic<float>* reverseParameter = nullptr;
-    
-    
-    std::atomic<float>* repeatParameter = nullptr;
     
     std::atomic<float>* rateParameter = nullptr;
     
@@ -128,18 +125,28 @@ private:
     std::atomic<float>* srDividerParameter = nullptr;
     
     
-//    m_granDel.setFilter(<#float f#>, <#float q#>, <#int type#>, <#bool trueIfFirstOrder#>, <#bool filterIsActive#>)
     std::atomic<float>* filterFreqParameter = nullptr;
     std::atomic<float>* filterQParameter = nullptr;
     std::atomic<float>* filterTypeParameter = nullptr;
-    std::atomic<float>* filterOrderParameter = nullptr;
     std::atomic<float>* filterActiveParameter = nullptr;
     
+    std::atomic<float>* filterJitterParameter = nullptr;
+    
+    
+    std::atomic<float>* ringModActiveParameter = nullptr;
+    std::atomic<float>* ringModFreqParameter = nullptr;
+    std::atomic<float>* ringModSpreadParameter = nullptr;
+    std::atomic<float>* ringModMixParameter = nullptr;
+    std::atomic<float>* ringModJitterParameter = nullptr;
+    
+    
     std::atomic<float>* crossTalkParameter = nullptr;
+    std::atomic<float>* reverseParameter = nullptr;
+    std::atomic<float>* repeatParameter = nullptr;
+    std::atomic<float>* densityParameter = nullptr;
     
     
     std::atomic<float>* outputModeParameter = nullptr;
-    std::atomic<float>* densityParameter = nullptr;
     std::atomic<float>* mixParameter = nullptr;
     
     std::atomic<float>* interpolationTypeParameter = nullptr;
@@ -148,7 +155,7 @@ private:
     std::atomic<float>* outLevelParameter = nullptr;
     
     
-    sjf_granularDelay< 16, MAX_N_HARMONIES > m_granDel;
+    sjf_granularDelay< float, 16, MAX_N_HARMONIES > m_granDel;
     
     static constexpr int NDIVLEVELS = 8;
     sjf_divNames< NDIVLEVELS > m_divNames;

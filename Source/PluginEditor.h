@@ -12,6 +12,13 @@
 #include "PluginProcessor.h"
 #include "../sjf_audio/sjf_LookAndFeel.h"
 #include "../sjf_audio/sjf_widgets.h"
+
+#define TEXT_HEIGHT 20
+#define INDENT 10
+#define SLIDERSIZE 100
+#define WIDTH SLIDERSIZE*7 +INDENT*13
+#define HEIGHT TEXT_HEIGHT*5 + INDENT + SLIDERSIZE*2
+#define PANEL_SPACING (TEXT_HEIGHT/5);
 //==============================================================================
 /**
 */
@@ -26,117 +33,72 @@ public:
     void resized() override;
 
 private:
+    
+    struct panel : public juce::Component, sjf_lookAndFeel
+    {
+        panel(){}
+        ~panel(){}
+        
+        void paint(juce::Graphics &g) override
+        {
+            g.setColour( sjf_lookAndFeel::panelColour.withAlpha(0.1f) );
+            g.fillRoundedRectangle( 0, 0, getWidth(), getHeight(), CORNER_SIZE );
+        }
+        
+        void resized() override
+        {
+            repaint();
+        }
+        
+        static constexpr int CORNER_SIZE = 5;
+    };
+    
     void timerCallback() override;
+    void delayTimeDisplay();
+    void jitterDisplayDisplay();
+    void rateDisplay();
+    void fxDisplay();
+    void crushDisplay( bool isDisplayed );
+    void ringModDisplay( bool isDisplayed );
+    void filterDisplay( bool isDisplayed );
+    void outmodeDisplay();
+    void drawPanels( int panelNum );
     
-    
-    void delayTimeDisplay()
-    {
-        if( delayTimeSyncButton.getToggleState() )
-        {
-            delaySyncOffsetSlider.setVisible( true );
-            delayTimeSyncDivisionNumberSlider.setVisible( true );
-            delayTimeSyncDivisionBox.setVisible( true );
-            delayTimeSlider.setVisible( false );
-            
-        }
-        else
-        {
-            delaySyncOffsetSlider.setVisible( false );
-            delayTimeSyncDivisionNumberSlider.setVisible( false );
-            delayTimeSyncDivisionBox.setVisible( false );
-            delayTimeSlider.setVisible( true );
-        }
-    }
-    
-    void jitterDisplayDisplay()
-    {
-        if ( delayTimeJitterSyncButton.getToggleState() )
-        {
-            delaySyncJitterNDivisionsSlider.setVisible( true );
-            delaySyncJitterDivisionBox.setVisible( true );
-        }
-        else
-        {
-            delaySyncJitterNDivisionsSlider.setVisible( false );
-            delaySyncJitterDivisionBox.setVisible( false );
-        }
-    }
-    
-    void rateDisplay()
-    {
-        if ( rateSyncButton.getToggleState() )
-        {
-            rateSlider.setVisible( false );
-            rateSyncDivisionBox.setVisible( true );
-            rateSyncNumDivisionsSlider.setVisible( true );
-        }
-        else
-        {
-            rateSlider.setVisible( true );
-            rateSyncDivisionBox.setVisible( false );
-            rateSyncNumDivisionsSlider.setVisible( false );
-        }
-    }
-    
-    
-    
-    void crushDisplay()
-    {
-        if ( bitCrushButton.getToggleState() )
-        {
-            bitDepthSlider.setVisible( true );
-            srDividerSlider.setVisible( true );
-        }
-        else
-        {
-            bitDepthSlider.setVisible( false );
-            srDividerSlider.setVisible( false );
-        }
-    }
-    
-    void outmodeDisplay()
-    {
-        if ( outputModeBox.getSelectedId() == 1 )
-        {
-            mixSlider.setVisible( true );
-        }
-        else
-        {
-            mixSlider.setVisible( false );
-        }
-    }
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     Sjf_mincerAudioProcessor& audioProcessor;
     juce::AudioProcessorValueTreeState& valueTreeState;
     
     
-    juce::Slider delayTimeSlider, delayTimeJitterSlider, feedbackSlider,
-        rateSlider, reverseSlider, repeatSlider, crossTalkSlider, densitySlider,
-        transpositionSlider, transpositionJitterSlider, outputLevelSlider, filterFreqSlider;
+    juce::Slider delayTimeSlider, feedbackSlider, rateSlider, reverseSlider, repeatSlider, crossTalkSlider, densitySlider, transpositionSlider, outputLevelSlider, filterFreqSlider, ringModFreqSlider;
     
-//    static constexpr int maxNHarmonies = audioProcessor.MAX_N_HARMONIES;
     std::array< juce::Slider, MAX_N_HARMONIES > harmonySliders;
     std::array< juce::ToggleButton, MAX_N_HARMONIES > harmonyButtons;
     std::array< std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>, MAX_N_HARMONIES > harmonySlidersAttachments;
     std::array< std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>, MAX_N_HARMONIES > harmonyButtonsAttachments;
     
-    sjf_numBox delayTimeSyncDivisionNumberSlider, delaySyncOffsetSlider, rateSyncNumDivisionsSlider, delaySyncJitterNDivisionsSlider, bitDepthSlider, srDividerSlider, mixSlider, filterQSlider;
+    sjf_numBox delayTimeSyncDivisionNumberSlider, delaySyncOffsetSlider, rateSyncNumDivisionsSlider, delaySyncJitterNDivisionsSlider, bitDepthSlider, srDividerSlider, mixSlider, filterQSlider, filterJitterSlider, ringModMixSlider, ringModSpreadSlider, ringModJitterSlider;
     
-    juce::ToggleButton delayTimeSyncButton, delayTimeJitterSyncButton, feedbackControlButton, rateSyncButton, bitCrushButton, filterButton;
+    sjf_numBox delayTimeJitterSlider, transpositionJitterSlider;
     
+    juce::ToggleButton delayTimeSyncButton, delayTimeJitterSyncButton, feedbackControlButton, rateSyncButton, bitCrushButton, filterButton, ringModButton;
     
     juce::ComboBox outputModeBox, interpolationTypeBox, rateSyncDivisionBox, delayTimeSyncDivisionBox, delaySyncJitterDivisionBox, harmonyDislayBox, filterTypeBox;
     
-    std::unique_ptr< juce::AudioProcessorValueTreeState::SliderAttachment > delayTimeSliderAttachment, delayTimeJitterSliderAttachment, feedbackSliderAttachment, reverseSliderAttachment, repeatSliderAttachment, delayTimeSyncDivisionNumberAttachment, delaySyncOffsetSliderAttachment, delaySyncJitterNDivisionsSliderAttachment, rateSliderAttachment, rateSyncNumDivisionsSliderAttachment, transpositionSliderAttachment, transpositionJitterSliderAttachment, crossTalkSliderAttachment, densitySliderAttachment, bitDepthSliderAttachment, srDividerSliderAttachment, mixSliderAttachment, outputLevelSliderAttachment, filterFreqSliderAttachment, filterQSliderAttachment;
+    std::unique_ptr< juce::AudioProcessorValueTreeState::SliderAttachment > delayTimeSliderAttachment, delayTimeJitterSliderAttachment, feedbackSliderAttachment, reverseSliderAttachment, repeatSliderAttachment, delayTimeSyncDivisionNumberAttachment, delaySyncOffsetSliderAttachment, delaySyncJitterNDivisionsSliderAttachment, rateSliderAttachment, rateSyncNumDivisionsSliderAttachment, transpositionSliderAttachment, transpositionJitterSliderAttachment, crossTalkSliderAttachment, densitySliderAttachment, bitDepthSliderAttachment, srDividerSliderAttachment, mixSliderAttachment, outputLevelSliderAttachment, filterFreqSliderAttachment, filterQSliderAttachment, filterJitterSliderAttachment, ringModFreqSliderAttachment, ringModMixSliderAttachment, ringModSpreadSliderAttachment, ringModJitterSliderAttachment;
     
     
     std::unique_ptr< juce::AudioProcessorValueTreeState::ComboBoxAttachment > outputModeBoxAttachment, interpolationTypeBoxAttachment, rateSyncDivisionBoxAttachment, delayTimeSyncDivisionBoxAttachment, delaySyncJitterDivisionBoxAttachment, filterTypeBoxAttachment;
     
-    std::unique_ptr< juce::AudioProcessorValueTreeState::ButtonAttachment > delayTimeSyncButtonAttachment, delayTimeJitterSyncButtonAttachment, feedbackControlButtonAttachment, rateSyncButtonAttachment, bitCrushButtonAttachment, filterButtonAttachment;
+    std::unique_ptr< juce::AudioProcessorValueTreeState::ButtonAttachment > delayTimeSyncButtonAttachment, delayTimeJitterSyncButtonAttachment, feedbackControlButtonAttachment, rateSyncButtonAttachment, bitCrushButtonAttachment, filterButtonAttachment, ringModButtonAttachment;
 
+    std::array< std::string, 3 > fxNames { "bitCrusher", "ringModulator", "filter"  };
+    std::array< std::string, 3 > fxDisplayNames { "bc", "rm", "f"  };
+    std::array< juce::ToggleButton, 3 > fxNameButtons;
     
-    juce::Label offsetLabel;
+    juce::Label offsetLabel, bitsLabel, srDivLabel, filterJitLabel, ringModMixLabel, ringModSpreadLabel, ringModJitterLabel;
+    
+    std::array< juce::Label, 3 > nDivsLabels, divTypeLabels;
     
     sjf_lookAndFeel otherLookAndFeel;
     
@@ -144,7 +106,16 @@ private:
     
     juce::ToggleButton tooltipsToggle;
     juce::Label tooltipLabel;
-    juce::String MAIN_TOOLTIP = "sjf_mincer: \nGranular Delay\n";
+    juce::String MAIN_TOOLTIP = "sjf_mincer: \nGranular Delay\n\nThe incomming signal is stored in a delayline and then individual grains are triggered from this delayline \nVariations and effects are then applied to individual grain";
+    
+    
+    std::array< panel, 7 > panels;
+    
+    enum divLabels { delT, delTJit, rate };
+    
+    enum effects { crush, ringMod, filter };
+    
+    enum panelNames { delayTime, feedback, gRate, transposition, gParams, fx, output };
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Sjf_mincerAudioProcessorEditor)
 };

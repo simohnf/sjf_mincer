@@ -9,11 +9,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-#define TEXT_HEIGHT 20
-#define INDENT 10
-#define SLIDERSIZE 100
-#define WIDTH SLIDERSIZE*8 +INDENT*13
-#define HEIGHT TEXT_HEIGHT*6 + INDENT + SLIDERSIZE*2
+
 //==============================================================================
 Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioProcessor& p, juce::AudioProcessorValueTreeState& vts)
 : AudioProcessorEditor (&p), audioProcessor (p), valueTreeState( vts )
@@ -21,12 +17,27 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     auto divNames = audioProcessor.getDivNames();
     auto interpNames = audioProcessor.getInterpNames();
     
+    for ( auto & l : nDivsLabels )
+    {
+        addAndMakeVisible( &l );
+        l.setText( "nDivs", juce::dontSendNotification );
+        l.setTooltip( MAIN_TOOLTIP );
+    }
+    for ( auto & l : divTypeLabels )
+    {
+        addAndMakeVisible( &l );
+        l.setText( "type", juce::dontSendNotification );
+        l.setTooltip( MAIN_TOOLTIP );
+    }
+    
+    
     setLookAndFeel( &otherLookAndFeel );
     otherLookAndFeel.drawComboBoxTick = false;
     
-//        outputModeBox, interpolationTypeBox, rateSyncDivisionBox, delayTimeSyncDivisionBox, delaySyncJitterDivisionBox, rateSyncDivision;
-//    outputModeBoxAttachment, interpolationTypeBoxAttachment, rateSyncDivisionBoxAttachment, delayTimeSyncDivisionBoxAttachment, delaySyncJitterDivisionBoxAttachment, rateSyncDivisionAttachment;
-//    delayTimeSlider, delayTimeJitterSlider, feedbackSlider, reverseSlider, repeatSlider;
+    for ( auto & p : panels )
+    {
+        addAndMakeVisible( &p );
+    }
     
     addAndMakeVisible( &delayTimeSyncButton );
     delayTimeSyncButton.setButtonText( "Sync" );
@@ -47,13 +58,19 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     delayTimeSlider.sendLookAndFeelChange();
     
     addAndMakeVisible( &delayTimeSyncDivisionBox );
+    auto menu = delayTimeSyncDivisionBox.getRootMenu();
     for ( auto i = 0; i < divNames.size(); i++ )
+    {
+        if ( i % 5 == 0 )
+            menu->addColumnBreak ();
         delayTimeSyncDivisionBox.addItem( divNames[ i ], i+1 );
+    }
+    delayTimeSyncDivisionBox.setJustificationType( juce::Justification::centred );
     delayTimeSyncDivisionBoxAttachment.reset( new juce::AudioProcessorValueTreeState::ComboBoxAttachment  ( valueTreeState, "division", delayTimeSyncDivisionBox )  );
     delayTimeSyncDivisionBox.setTooltip( "This sets the base rhythmic division when the delay time is synced to the session tempo \n/8n is an 8th note, /8nd is a dotted 8th note, /8nt is an 8th note triplet, /8nq is an 8th note quintuplet, /8ns is an 8th note septuplet, etc");
     delayTimeSyncDivisionBox.sendLookAndFeelChange();
     
-//    delayTimeSyncDivisionNumberAttachment
+    
     addAndMakeVisible( &delayTimeSyncDivisionNumberSlider );
     delayTimeSyncDivisionNumberAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "numDivisions", delayTimeSyncDivisionNumberSlider )  );
     delayTimeSyncDivisionNumberSlider.setTooltip( "This sets the number of base divisions when the delay time is synced to the session tempo. \ne.g. if the base division is /8n and the number of divisions is set to 5 the delay time will be 5 8th notes" );
@@ -86,8 +103,6 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     feedbackControlButton.sendLookAndFeelChange();
     
     
-    
-    
     addAndMakeVisible( &delayTimeJitterSyncButton );
     delayTimeJitterSyncButton.setButtonText( "Sync" );
     delayTimeJitterSyncButtonAttachment.reset( new juce::AudioProcessorValueTreeState::ButtonAttachment( valueTreeState, "syncJitter", delayTimeJitterSyncButton ) );
@@ -99,9 +114,7 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     delayTimeJitterSyncButton.sendLookAndFeelChange();
     
     addAndMakeVisible( &delayTimeJitterSlider);
-    delayTimeJitterSlider.setSliderStyle( juce::Slider::Rotary );
     delayTimeJitterSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "delayTimeJitter", delayTimeJitterSlider )  );
-    delayTimeJitterSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, delayTimeJitterSlider.getWidth(), TEXT_HEIGHT );
     delayTimeJitterSlider.setTooltip( "This sets the amount of random variations in delay time" );
     delayTimeJitterSlider.sendLookAndFeelChange();
     delayTimeJitterSlider.setTextValueSuffix( "%" );
@@ -113,16 +126,19 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     delaySyncJitterNDivisionsSlider.sendLookAndFeelChange();
     
     addAndMakeVisible( &delaySyncJitterDivisionBox );
+    menu = delaySyncJitterDivisionBox.getRootMenu();
     for ( auto i = 0; i < divNames.size(); i++ )
+    {
+        if ( i % 5 == 0 )
+            menu->addColumnBreak ();
         delaySyncJitterDivisionBox.addItem( divNames[ i ], i+1 );
+    }
+    delaySyncJitterDivisionBox.setJustificationType( juce::Justification::centred );
     delaySyncJitterDivisionBoxAttachment.reset( new juce::AudioProcessorValueTreeState::ComboBoxAttachment  ( valueTreeState, "syncedJitterDivision", delaySyncJitterDivisionBox )  );
     delaySyncJitterDivisionBox.setTooltip( "This sets the base rhythmic division when the random delay time variations are synced to the session tempo \n/8n is an 8th note, /8nd is a dotted 8th note, /8nt is an 8th note triplet, /8nq is an 8th note quintuplet, /8ns is an 8th note septuplet, etc");
     delaySyncJitterDivisionBox.sendLookAndFeelChange();
     
-    
-    
 
-    
     
     addAndMakeVisible( &rateSyncButton );
     rateSyncButton.setButtonText( "Sync" );
@@ -147,13 +163,19 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     
     
     addAndMakeVisible( &rateSyncDivisionBox );
+    menu = rateSyncDivisionBox.getRootMenu();
     for ( auto i = 0; i < divNames.size(); i++ )
+    {
+        if ( i % 5 == 0 )
+            menu->addColumnBreak ();
         rateSyncDivisionBox.addItem( divNames[ i ], i+1 );
+    }
+    rateSyncDivisionBox.setJustificationType( juce::Justification::centred );
     rateSyncDivisionBoxAttachment.reset( new juce::AudioProcessorValueTreeState::ComboBoxAttachment  ( valueTreeState, "rateSyncDivision", rateSyncDivisionBox )  );
     rateSyncDivisionBox.setTooltip( "This sets the base rhythmic division when the grain rate is synced to the session tempo \n/8n is an 8th note, /8nd is a dotted 8th note, /8nt is an 8th note triplet, /8nq is an 8th note quintuplet, /8ns is an 8th note septuplet, etc");
     rateSyncDivisionBox.sendLookAndFeelChange();
     
-//    delayTimeSyncDivisionNumberAttachment
+    
     addAndMakeVisible( &rateSyncNumDivisionsSlider );
     rateSyncNumDivisionsSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "rateSyncNumDivisions", rateSyncNumDivisionsSlider )  );
     rateSyncNumDivisionsSlider.setTooltip( "This sets the number of base divisions when grain rate is synced to the session tempo. \ne.g. if the base division is /8n and the number of divisions is set to 7 a new grain will be produced once every seven 8th notes" );
@@ -168,9 +190,7 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     transpositionSlider.sendLookAndFeelChange();
     
     addAndMakeVisible( &transpositionJitterSlider );
-    transpositionJitterSlider.setSliderStyle( juce::Slider::Rotary );
     transpositionJitterSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "transpositionJitter", transpositionJitterSlider )  );
-    transpositionJitterSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, transpositionJitterSlider.getWidth(), TEXT_HEIGHT );
     transpositionJitterSlider.setTooltip( "This sets the depth of random variations in the grain transposition" );
     transpositionJitterSlider.sendLookAndFeelChange();
     transpositionJitterSlider.setTextValueSuffix( "%" );
@@ -244,30 +264,99 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     densitySlider.sendLookAndFeelChange();
     densitySlider.setTextValueSuffix( "%" );
 
-    addAndMakeVisible( &bitCrushButton );
-    bitCrushButton.setButtonText( "bitCrush" );
-    bitCrushButtonAttachment.reset( new juce::AudioProcessorValueTreeState::ButtonAttachment( valueTreeState, "crush", bitCrushButton ) );
-    bitCrushButton.onClick = [ this ]
+
+    for ( auto i = 0; i < fxNameButtons.size(); i ++ )
     {
-        crushDisplay();
-    };
+        addAndMakeVisible( &fxNameButtons[ i ] );
+        fxNameButtons[ i ].setButtonText( fxDisplayNames[ i ] );
+        fxNameButtons[ i ].setTooltip( "This displays the parameters for the " + fxNames[ i ]  + " effect" );
+        fxNameButtons[ i ].onClick = [ this, i ]
+        {
+            fxNameButtons[ i ].setToggleState( true , juce::dontSendNotification );
+            for ( auto j = 0; j < fxNameButtons.size(); j++ )
+            {
+                if ( j != i )
+                    fxNameButtons[ j ].setToggleState( false , juce::dontSendNotification );
+            }
+            fxDisplay();
+        };
+    }
+    fxNameButtons[ effects::crush ].setToggleState( true , juce::dontSendNotification );
+    
+    
+    
+    addAndMakeVisible( &bitCrushButton );
+    bitCrushButton.setButtonText( "On" );
+    bitCrushButtonAttachment.reset( new juce::AudioProcessorValueTreeState::ButtonAttachment( valueTreeState, "crush", bitCrushButton ) );
     bitCrushButton.setTooltip( "This turns on/off the bit crusher and sample rate reducer" );
     bitCrushButton.sendLookAndFeelChange();
 
+    addAndMakeVisible( &bitsLabel );
+    bitsLabel.setText( "nBits ", juce::dontSendNotification );
+    bitsLabel.setTooltip( MAIN_TOOLTIP );
     addAndMakeVisible( &bitDepthSlider );
-    bitDepthSlider.setTextValueSuffix( " bits" );
+//    bitDepthSlider.setTextValueSuffix( " bits" );
     bitDepthSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "bitDepth", bitDepthSlider )  );
     bitDepthSlider.setTooltip( "This sets the number of bits... fewer bits equals more distorted signals" );
     bitDepthSlider.sendLookAndFeelChange();
     
+    addAndMakeVisible( &srDivLabel );
+    srDivLabel.setText( "SR / ", juce::dontSendNotification );
+    srDivLabel.setTooltip( MAIN_TOOLTIP );
     addAndMakeVisible( &srDividerSlider );
     srDividerSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "sampleRateDivider", srDividerSlider )  );
     srDividerSlider.setTooltip( "This sets the factor by which the sample rate is reduced. e.g. if set to 2 the sample rate is divided by to, at 3 the sample rate is divided by 3. \nLower sample rate equals more aliasing" );
     srDividerSlider.sendLookAndFeelChange();
-    srDividerSlider.setTextValueSuffix(" srDiv");
     
     
+    
+    addAndMakeVisible( &ringModButton );
+    ringModButton.setButtonText( "On" );
+    ringModButtonAttachment.reset( new juce::AudioProcessorValueTreeState::ButtonAttachment( valueTreeState, "ringMod", ringModButton ) );
+    ringModButton.setTooltip( "This turns on/off the ring modulator" );
+    ringModButton.sendLookAndFeelChange();
 
+    addAndMakeVisible( &ringModFreqSlider );
+    ringModFreqSlider.setTextValueSuffix( "Hz" );
+    ringModFreqSlider.setSliderStyle( juce::Slider::Rotary );
+    ringModFreqSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "ringModFreq", ringModFreqSlider )  );
+    ringModFreqSlider.setTextBoxStyle( juce::Slider::TextBoxBelow, false, ringModFreqSlider.getWidth(), TEXT_HEIGHT );
+    ringModFreqSlider.setTooltip( "This sets the modulator frequency" );
+    ringModFreqSlider.sendLookAndFeelChange();
+    
+    addAndMakeVisible( &ringModMixLabel );
+    ringModMixLabel.setText( "mix", juce::dontSendNotification );
+    ringModMixLabel.setTooltip( MAIN_TOOLTIP );
+    addAndMakeVisible( &ringModMixSlider );
+    ringModMixSlider.setTextValueSuffix( "%" );
+    ringModMixSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "ringModMix", ringModMixSlider )  );
+    ringModMixSlider.setTooltip( "This sets the percentage of wet signal mixed with the original. At 0% no ring modulation is applied, at 100% only the ring modulator is output" );
+    ringModMixSlider.sendLookAndFeelChange();
+    
+    addAndMakeVisible( &ringModSpreadLabel );
+    ringModSpreadLabel.setText( "spread", juce::dontSendNotification );
+    ringModSpreadLabel.setTooltip( MAIN_TOOLTIP );
+    addAndMakeVisible( &ringModSpreadSlider );
+    ringModSpreadSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "ringModSpread", ringModSpreadSlider )  );
+    ringModSpreadSlider.setTextValueSuffix( "%" );
+    ringModSpreadSlider.setTooltip( "This sets the difference between the frequency for the left and right channel modulators " );
+    ringModSpreadSlider.sendLookAndFeelChange();
+    
+    addAndMakeVisible( &ringModJitterLabel );
+    ringModJitterLabel.setText( "jitter", juce::dontSendNotification );
+    ringModSpreadLabel.setTooltip( MAIN_TOOLTIP );
+    addAndMakeVisible( &ringModJitterSlider );
+    ringModJitterSlider.setTextValueSuffix( "%" );
+    ringModJitterSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "ringModJitter", ringModJitterSlider )  );
+    ringModJitterSlider.setTooltip( "This sets the amount of random variation applied to the frequency of the modulator" );
+    ringModJitterSlider.sendLookAndFeelChange();
+    
+    
+    addAndMakeVisible( &filterButton );
+    filterButtonAttachment.reset( new juce::AudioProcessorValueTreeState::ButtonAttachment( valueTreeState, "filter", filterButton ) );
+    filterButton.setButtonText( "On" );
+    filterButton.setTooltip( "This turns on/off the filter. This is only applied to the output of the delayline" );
+    filterButton.sendLookAndFeelChange();
     
     addAndMakeVisible( &filterFreqSlider );
     filterFreqSlider.setTextValueSuffix( "Hz" );
@@ -292,13 +381,15 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     filterTypeBox.setTooltip( "This allows you to choose betwreen low pass, high pass, and band pass filters" );
     filterTypeBox.sendLookAndFeelChange();
     
+    addAndMakeVisible( &filterJitLabel );
+    filterJitLabel.setTooltip( MAIN_TOOLTIP );
+    filterJitLabel.setText( "jitter", juce::dontSendNotification );
+    addAndMakeVisible( &filterJitterSlider );
+    filterJitterSliderAttachment.reset( new juce::AudioProcessorValueTreeState::SliderAttachment ( valueTreeState, "filterJitter", filterJitterSlider )  );
+    filterJitterSlider.setTooltip( "This sets the amount of random variations applied to the filter frequency" );
+    filterJitterSlider.setTextValueSuffix( "%" );
+    filterJitterSlider.sendLookAndFeelChange();
     
-    
-    addAndMakeVisible( &filterButton );
-    filterButtonAttachment.reset( new juce::AudioProcessorValueTreeState::ButtonAttachment( valueTreeState, "filterActive", filterButton ) );
-    filterButton.setButtonText( "filter" );
-    filterButton.setTooltip( "This turns on/off the filter. This is only applied to the output of the delayline" );
-    filterButton.sendLookAndFeelChange();
     
     addAndMakeVisible( &outputModeBox );
     outputModeBox.addItem( "mix", 1 );
@@ -362,7 +453,7 @@ Sjf_mincerAudioProcessorEditor::Sjf_mincerAudioProcessorEditor (Sjf_mincerAudioP
     delayTimeDisplay();
     jitterDisplayDisplay();
     rateDisplay();
-    crushDisplay();
+    fxDisplay();
     outmodeDisplay();
     
     setSize ( WIDTH, HEIGHT );
@@ -389,30 +480,27 @@ void Sjf_mincerAudioProcessorEditor::paint (juce::Graphics& g)
     sjf_makeBackground< 40 >( g, r );
 #endif
     
-
+    
+    
     g.setColour (juce::Colours::white);
     g.setFont (15.0f);
     g.drawFittedText ("sjf_mincer", 0, 0, getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
     
     g.drawFittedText ("delayTime", delayTimeSyncButton.getX(), delayTimeSyncButton.getY() - TEXT_HEIGHT, delayTimeSyncButton.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
-    
-//    g.drawFittedText ("offset", delaySyncOffsetSlider.getX(), delaySyncOffsetSlider.getY() - TEXT_HEIGHT, delaySyncOffsetSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
     g.drawFittedText ("dtJitter", delayTimeJitterSyncButton.getX(), delayTimeJitterSyncButton.getY() - TEXT_HEIGHT, delayTimeJitterSyncButton.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
-    g.drawFittedText ("rate", rateSyncButton.getX(), rateSyncButton.getY() - TEXT_HEIGHT, rateSyncButton.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
+
+    g.drawFittedText ("grain rate", rateSyncButton.getX(), rateSyncButton.getY() - TEXT_HEIGHT, rateSyncButton.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
     
     
     g.drawFittedText ("transposition", transpositionSlider.getX(), transpositionSlider.getY() - TEXT_HEIGHT, transpositionSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
-    g.drawFittedText ("trJitter", transpositionJitterSlider.getX(), transpositionJitterSlider.getY() - TEXT_HEIGHT, transpositionJitterSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
-
-    
+    g.drawFittedText ("trJitter", transpositionSlider.getX(), transpositionSlider.getBottom(), transpositionJitterSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
+    g.drawFittedText ("Grain Parameters", crossTalkSlider.getX(), crossTalkSlider.getY() - TEXT_HEIGHT*2, densitySlider.getRight() - crossTalkSlider.getX(), TEXT_HEIGHT, juce::Justification::centred, 1);
     g.drawFittedText ("crosstalk", crossTalkSlider.getX(), crossTalkSlider.getY() - TEXT_HEIGHT, crossTalkSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
     g.drawFittedText ("density", densitySlider.getX(), densitySlider.getY() - TEXT_HEIGHT, densitySlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
     g.drawFittedText ("reverse", reverseSlider.getX(), reverseSlider.getY() - TEXT_HEIGHT, reverseSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
     g.drawFittedText ("repeat", repeatSlider.getX(), repeatSlider.getY() - TEXT_HEIGHT, repeatSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
     
-    
-//    g.drawFittedText ("bitDepth", bitDepthSlider.getX(), bitDepthSlider.getY() - TEXT_HEIGHT, bitDepthSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
-//    g.drawFittedText ("SR Divider", srDividerSlider.getX(), srDividerSlider.getY() - TEXT_HEIGHT, srDividerSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
+    g.drawFittedText ("FX", fxNameButtons[ 0 ].getX(), fxNameButtons[ 0 ].getY() - TEXT_HEIGHT, repeatSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
     
     
     g.drawFittedText ("feedback", feedbackSlider.getX(), feedbackSlider.getY() - TEXT_HEIGHT, feedbackSlider.getWidth(), TEXT_HEIGHT, juce::Justification::centred, 1);
@@ -422,64 +510,101 @@ void Sjf_mincerAudioProcessorEditor::paint (juce::Graphics& g)
 
 void Sjf_mincerAudioProcessorEditor::resized()
 {
-    delayTimeSyncButton.setBounds( INDENT, TEXT_HEIGHT*2, SLIDERSIZE, TEXT_HEIGHT );
+    auto row1Y = TEXT_HEIGHT*2;
     
+    delayTimeSyncButton.setBounds( INDENT, row1Y, SLIDERSIZE, TEXT_HEIGHT );
     delayTimeSlider.setBounds( delayTimeSyncButton.getX(), delayTimeSyncButton.getBottom(), SLIDERSIZE, SLIDERSIZE );
-    delayTimeSyncDivisionNumberSlider.setBounds( delayTimeSyncButton.getX(), delayTimeSyncButton.getBottom(), SLIDERSIZE / 2, SLIDERSIZE / 2 );
-    delayTimeSyncDivisionBox.setBounds( delayTimeSyncDivisionNumberSlider.getRight(), delayTimeSyncDivisionNumberSlider.getY(), SLIDERSIZE / 2, SLIDERSIZE / 2  );
+    nDivsLabels[ divLabels::delT ].setBounds( delayTimeSyncButton.getX(), delayTimeSyncButton.getBottom(), SLIDERSIZE/2, TEXT_HEIGHT );
+    divTypeLabels[ divLabels::delT ].setBounds( nDivsLabels[ divLabels::delT ].getX(), nDivsLabels[ divLabels::delT ].getBottom(), SLIDERSIZE/2, TEXT_HEIGHT );
+    delayTimeSyncDivisionNumberSlider.setBounds( nDivsLabels[ divLabels::delT ].getRight(), nDivsLabels[ divLabels::delT ].getY(), SLIDERSIZE/2, TEXT_HEIGHT);
+    delayTimeSyncDivisionBox.setBounds( delayTimeSyncDivisionNumberSlider.getX(), delayTimeSyncDivisionNumberSlider.getBottom(), SLIDERSIZE/2, TEXT_HEIGHT  );
     delaySyncOffsetSlider.setBounds( delayTimeSlider.getX(), delayTimeSyncDivisionBox.getBottom()+TEXT_HEIGHT+INDENT/2, SLIDERSIZE, TEXT_HEIGHT   );
-
+    
+    
     delayTimeJitterSyncButton.setBounds( delayTimeSyncButton.getX(), delayTimeSlider.getBottom() + TEXT_HEIGHT, SLIDERSIZE, TEXT_HEIGHT );
-    delayTimeJitterSlider.setBounds( delayTimeJitterSyncButton.getX(), delayTimeJitterSyncButton.getBottom(), SLIDERSIZE, SLIDERSIZE );
-    delaySyncJitterNDivisionsSlider.setBounds( delayTimeJitterSlider.getX(), delayTimeJitterSlider.getBottom(), SLIDERSIZE / 2, TEXT_HEIGHT );
-    delaySyncJitterDivisionBox.setBounds( delaySyncJitterNDivisionsSlider.getRight(), delaySyncJitterNDivisionsSlider.getY(), SLIDERSIZE / 2, TEXT_HEIGHT );
+    delayTimeJitterSlider.setBounds( delayTimeJitterSyncButton.getX(), delayTimeJitterSyncButton.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
+    nDivsLabels[ divLabels::delTJit ].setBounds( delayTimeJitterSyncButton.getX(), delayTimeJitterSlider.getBottom(), SLIDERSIZE/2, TEXT_HEIGHT );
+    divTypeLabels[ divLabels::delTJit ].setBounds( nDivsLabels[ divLabels::delTJit ].getX(), nDivsLabels[ divLabels::delTJit ].getBottom(), SLIDERSIZE/2, TEXT_HEIGHT );
+    delaySyncJitterNDivisionsSlider.setBounds( nDivsLabels[ divLabels::delTJit ].getRight(), nDivsLabels[ divLabels::delTJit ].getY(), SLIDERSIZE / 2, TEXT_HEIGHT );
+    delaySyncJitterDivisionBox.setBounds( divTypeLabels[ divLabels::delTJit ].getRight(), divTypeLabels[ divLabels::delTJit ].getY(), SLIDERSIZE / 2, TEXT_HEIGHT );
 
-//    auto fbSlY = ( delaySyncJitterDivisionBox.getBottom() - delayTimeSlider.getY() ) / 2;
-    feedbackSlider.setBounds( delayTimeSlider.getRight()+INDENT, delayTimeSlider.getY(), SLIDERSIZE, SLIDERSIZE );
+    drawPanels( panelNames::delayTime );
+    
+    
+    feedbackSlider.setBounds( delayTimeSlider.getRight()+INDENT*2, row1Y, SLIDERSIZE, SLIDERSIZE );
     feedbackControlButton.setBounds( feedbackSlider.getRight() - TEXT_HEIGHT, feedbackSlider.getY(), TEXT_HEIGHT, TEXT_HEIGHT );
     
+    drawPanels( panelNames::feedback );
     
     rateSyncButton.setBounds( feedbackSlider.getX(), delayTimeJitterSyncButton.getY(), SLIDERSIZE, TEXT_HEIGHT );
     rateSlider.setBounds( rateSyncButton.getX(), rateSyncButton.getBottom(), SLIDERSIZE, SLIDERSIZE );
-    rateSyncNumDivisionsSlider.setBounds( rateSyncButton.getX(), rateSyncButton.getBottom(), SLIDERSIZE / 2, SLIDERSIZE / 2 );
-    rateSyncDivisionBox.setBounds( rateSyncNumDivisionsSlider.getRight(), rateSyncNumDivisionsSlider.getY(), SLIDERSIZE / 2, SLIDERSIZE / 2 );
+    nDivsLabels[ divLabels::rate ].setBounds( rateSyncButton.getX(), rateSyncButton.getBottom(), SLIDERSIZE/2, TEXT_HEIGHT );
+    divTypeLabels[ divLabels::rate ].setBounds( nDivsLabels[ divLabels::rate ].getX(), nDivsLabels[ divLabels::rate ].getBottom(), SLIDERSIZE/2, TEXT_HEIGHT );
+    rateSyncNumDivisionsSlider.setBounds( nDivsLabels[ divLabels::rate ].getRight(), nDivsLabels[ divLabels::rate ].getY(), SLIDERSIZE/2, TEXT_HEIGHT );
+    rateSyncDivisionBox.setBounds( divTypeLabels[ divLabels::rate ].getRight(), divTypeLabels[ divLabels::rate ].getY(), SLIDERSIZE/2, TEXT_HEIGHT );
     
-    transpositionSlider.setBounds( rateSyncButton.getRight()+INDENT*2, delayTimeSlider.getY(), SLIDERSIZE, SLIDERSIZE );
-    transpositionJitterSlider.setBounds( transpositionSlider.getRight() + INDENT, transpositionSlider.getY(), SLIDERSIZE, SLIDERSIZE );
+    drawPanels( panelNames::gRate );
+
+    transpositionSlider.setBounds( rateSyncButton.getRight()+INDENT*2, row1Y, SLIDERSIZE, SLIDERSIZE );
+    transpositionJitterSlider.setBounds( transpositionSlider.getX() + SLIDERSIZE/2, transpositionSlider.getBottom(), SLIDERSIZE/2, TEXT_HEIGHT );
     
-    harmonyDislayBox.setBounds( transpositionSlider.getX() + SLIDERSIZE/2 + INDENT/2, rateSyncButton.getY(), SLIDERSIZE, TEXT_HEIGHT );
+    harmonyDislayBox.setBounds( transpositionSlider.getX(), rateSyncButton.getY(), SLIDERSIZE, TEXT_HEIGHT );
     for ( auto i = 0; i < MAX_N_HARMONIES; i++ )
     {
         harmonySliders[ i ].setBounds( harmonyDislayBox.getX(), harmonyDislayBox.getBottom(), SLIDERSIZE, SLIDERSIZE );
         harmonyButtons[ i ].setBounds( harmonySliders[ i ].getRight() - TEXT_HEIGHT, harmonySliders[ i ].getY(), TEXT_HEIGHT, TEXT_HEIGHT );
     }
 
-    crossTalkSlider.setBounds( transpositionJitterSlider.getRight()+INDENT*2, transpositionSlider.getY(), SLIDERSIZE, SLIDERSIZE );
-    densitySlider.setBounds( crossTalkSlider.getRight()+INDENT, crossTalkSlider.getY(), SLIDERSIZE, SLIDERSIZE );
+    drawPanels( panelNames::transposition );
+    
+    crossTalkSlider.setBounds( transpositionSlider.getRight()+INDENT*2, row1Y+TEXT_HEIGHT, SLIDERSIZE, SLIDERSIZE );
+    densitySlider.setBounds( crossTalkSlider.getRight()+INDENT, row1Y+TEXT_HEIGHT, SLIDERSIZE, SLIDERSIZE );
 
 
-    reverseSlider.setBounds( crossTalkSlider.getX(), harmonyDislayBox.getBottom(), SLIDERSIZE, SLIDERSIZE );
+    reverseSlider.setBounds( crossTalkSlider.getX(), crossTalkSlider.getBottom() + TEXT_HEIGHT, SLIDERSIZE, SLIDERSIZE );
     repeatSlider.setBounds( densitySlider.getX(), reverseSlider.getY(), SLIDERSIZE, SLIDERSIZE );
 
+    drawPanels( panelNames::gParams );
 
-    bitCrushButton.setBounds( densitySlider.getRight() + INDENT*2, densitySlider.getY(), SLIDERSIZE, TEXT_HEIGHT );
-    bitDepthSlider.setBounds( bitCrushButton.getX(), bitCrushButton.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
-    srDividerSlider.setBounds( bitDepthSlider.getX(), bitDepthSlider.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
+    // good be simpler with this but this just ensures things are aligned
+    auto fxSliderSize = sjf_findClosestMultiple< int >( SLIDERSIZE, fxNameButtons.size() );
+    auto fxSliderHW = fxSliderSize/2;
+    auto fxLabelW = fxSliderSize - fxSliderHW;
+    for ( auto i = 0; i < fxNameButtons.size(); i++ )
+        fxNameButtons[ i ].setBounds( densitySlider.getRight() + INDENT*2 + i*fxSliderSize/fxNameButtons.size(), row1Y, SLIDERSIZE/ fxNameButtons.size(), TEXT_HEIGHT );
+    bitCrushButton.setBounds( fxNameButtons[ 0 ].getX(), fxNameButtons[ 0 ].getBottom(), fxSliderSize, TEXT_HEIGHT );
+    bitsLabel.setBounds( bitCrushButton.getX(), bitCrushButton.getBottom(), fxLabelW, TEXT_HEIGHT );
+    srDivLabel.setBounds( bitsLabel.getX(), bitsLabel.getBottom(), fxLabelW, TEXT_HEIGHT );
+    bitDepthSlider.setBounds( bitsLabel.getRight(), bitsLabel.getY(), fxSliderHW, TEXT_HEIGHT );
+    srDividerSlider.setBounds( srDivLabel.getRight(), srDivLabel.getY(), fxSliderHW, TEXT_HEIGHT );
 
     
-    filterButton.setBounds( srDividerSlider.getX(), srDividerSlider.getBottom() + TEXT_HEIGHT, SLIDERSIZE, TEXT_HEIGHT );
-    filterTypeBox.setBounds( filterButton.getX(), filterButton.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
-    filterFreqSlider.setBounds( filterTypeBox.getX(), filterTypeBox.getBottom(), SLIDERSIZE, SLIDERSIZE );
-    filterQSlider.setBounds( filterFreqSlider.getX(), filterFreqSlider.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
+    ringModButton.setBounds( fxNameButtons[ 0 ].getX(), fxNameButtons[ 0 ].getBottom(), fxSliderSize, TEXT_HEIGHT );
+    ringModFreqSlider.setBounds( ringModButton.getX(), ringModButton.getBottom(), fxSliderSize, SLIDERSIZE );
+    ringModMixLabel.setBounds( ringModFreqSlider.getX(), ringModFreqSlider.getBottom(), fxLabelW,  TEXT_HEIGHT );
+    ringModMixSlider.setBounds( ringModMixLabel.getRight(), ringModMixLabel.getY(), fxSliderHW, TEXT_HEIGHT );
+    ringModSpreadLabel.setBounds( ringModMixLabel.getX(), ringModMixLabel.getBottom(), fxLabelW,  TEXT_HEIGHT );
+    ringModSpreadSlider.setBounds( ringModSpreadLabel.getRight(), ringModSpreadLabel.getY(), fxSliderHW, TEXT_HEIGHT );
+    ringModJitterLabel.setBounds( ringModSpreadLabel.getX(), ringModSpreadLabel.getBottom(), fxLabelW,  TEXT_HEIGHT );
+    ringModJitterSlider.setBounds( ringModJitterLabel.getRight(), ringModJitterLabel.getY(), fxSliderHW, TEXT_HEIGHT );
     
+    filterButton.setBounds( bitCrushButton.getX(), bitCrushButton.getY(), fxLabelW, TEXT_HEIGHT );
+    filterTypeBox.setBounds( filterButton.getRight(), filterButton.getY(), fxSliderHW, TEXT_HEIGHT );
+    filterFreqSlider.setBounds( filterButton.getX(), filterTypeBox.getBottom(), fxSliderSize, SLIDERSIZE );
+    filterQSlider.setBounds( filterFreqSlider.getX(), filterFreqSlider.getBottom(), fxSliderSize, TEXT_HEIGHT );
+    filterJitLabel.setBounds( filterQSlider.getX(), filterQSlider.getBottom(), fxLabelW, TEXT_HEIGHT );
+    filterJitterSlider.setBounds( filterJitLabel.getRight(), filterQSlider.getBottom(), fxSliderHW, TEXT_HEIGHT );
     
-    outputLevelSlider.setBounds( bitCrushButton.getRight()+INDENT*2, bitCrushButton.getY()+TEXT_HEIGHT, SLIDERSIZE, SLIDERSIZE );
+    drawPanels( panelNames::fx );
+    
+    outputLevelSlider.setBounds( bitCrushButton.getRight()+INDENT*2, row1Y, SLIDERSIZE, SLIDERSIZE );
         
-    outputModeBox.setBounds( outputLevelSlider.getX(), outputLevelSlider.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
+    outputModeBox.setBounds( outputLevelSlider.getX(), outputLevelSlider.getBottom()+INDENT, SLIDERSIZE, TEXT_HEIGHT );
     mixSlider.setBounds( outputModeBox.getX(), outputModeBox.getBottom(), SLIDERSIZE, TEXT_HEIGHT );
 
     interpolationTypeBox.setBounds( mixSlider.getX(), mixSlider.getBottom()+TEXT_HEIGHT, SLIDERSIZE, TEXT_HEIGHT );
 
+    drawPanels( panelNames::output);
     
     tooltipsToggle.setBounds( interpolationTypeBox.getX(), HEIGHT - INDENT - TEXT_HEIGHT, SLIDERSIZE, TEXT_HEIGHT );
     tooltipLabel.setBounds( 0, HEIGHT, getWidth(), TEXT_HEIGHT*5 );
@@ -491,4 +616,159 @@ void Sjf_mincerAudioProcessorEditor::timerCallback()
 {
     if ( tooltipsToggle.getToggleState() )
         sjf_setTooltipLabel( this, MAIN_TOOLTIP, tooltipLabel );
+}
+
+
+void Sjf_mincerAudioProcessorEditor::delayTimeDisplay()
+{
+    nDivsLabels[ divLabels::delT ].setVisible( delayTimeSyncButton.getToggleState() );
+    divTypeLabels[ divLabels::delT ].setVisible( delayTimeSyncButton.getToggleState() );
+    delaySyncOffsetSlider.setVisible( delayTimeSyncButton.getToggleState() );
+    delayTimeSyncDivisionNumberSlider.setVisible( delayTimeSyncButton.getToggleState() );
+    delayTimeSyncDivisionBox.setVisible( delayTimeSyncButton.getToggleState() );
+    delayTimeSlider.setVisible( !delayTimeSyncButton.getToggleState() );
+}
+
+void Sjf_mincerAudioProcessorEditor::jitterDisplayDisplay()
+{
+    nDivsLabels[ divLabels::delTJit ].setVisible( delayTimeJitterSyncButton.getToggleState() );
+    divTypeLabels[ divLabels::delTJit ].setVisible( delayTimeJitterSyncButton.getToggleState() );
+    delaySyncJitterNDivisionsSlider.setVisible( delayTimeJitterSyncButton.getToggleState() );
+    delaySyncJitterDivisionBox.setVisible( delayTimeJitterSyncButton.getToggleState() );
+    
+    drawPanels( panelNames::delayTime );
+}
+
+void Sjf_mincerAudioProcessorEditor::rateDisplay()
+{
+    nDivsLabels[ divLabels::rate ].setVisible( rateSyncButton.getToggleState() );
+    divTypeLabels[ divLabels::rate ].setVisible( rateSyncButton.getToggleState() );
+    rateSlider.setVisible( !rateSyncButton.getToggleState() );
+    rateSyncDivisionBox.setVisible( rateSyncButton.getToggleState() );
+    rateSyncNumDivisionsSlider.setVisible( rateSyncButton.getToggleState() );
+    
+    drawPanels( panelNames::gRate );
+}
+
+void Sjf_mincerAudioProcessorEditor::fxDisplay()
+{
+    crushDisplay( fxNameButtons[ effects::crush ].getToggleState() );
+    filterDisplay( fxNameButtons[ effects::filter ].getToggleState() );
+    ringModDisplay( fxNameButtons[ effects::ringMod ].getToggleState() );
+    drawPanels( panelNames::fx );
+}
+
+void Sjf_mincerAudioProcessorEditor::crushDisplay( bool isDisplayed )
+{
+    bitCrushButton.setVisible( isDisplayed );
+    bitDepthSlider.setVisible( isDisplayed );
+    srDividerSlider.setVisible( isDisplayed );
+    bitsLabel.setVisible( isDisplayed );
+    srDivLabel.setVisible( isDisplayed );
+}
+
+void Sjf_mincerAudioProcessorEditor::ringModDisplay( bool isDisplayed )
+{
+    ringModButton.setVisible( isDisplayed );
+    ringModFreqSlider.setVisible( isDisplayed );
+    ringModSpreadSlider.setVisible( isDisplayed );
+    ringModSpreadLabel.setVisible( isDisplayed );
+    ringModMixLabel.setVisible( isDisplayed );
+    ringModMixSlider.setVisible( isDisplayed );
+    ringModJitterLabel.setVisible( isDisplayed );
+    ringModJitterSlider.setVisible( isDisplayed );
+}
+
+void Sjf_mincerAudioProcessorEditor::filterDisplay( bool isDisplayed )
+{
+    filterJitLabel.setVisible( isDisplayed );
+    filterJitterSlider.setVisible( isDisplayed );
+    filterButton.setVisible( isDisplayed );
+    filterQSlider.setVisible( isDisplayed );
+    filterTypeBox.setVisible( isDisplayed );
+    filterFreqSlider.setVisible( isDisplayed );
+}
+
+void Sjf_mincerAudioProcessorEditor::outmodeDisplay()
+{
+    mixSlider.setVisible( ( outputModeBox.getSelectedId() == 1 ) );
+}
+
+void Sjf_mincerAudioProcessorEditor::drawPanels( int panelNum )
+{
+    float panelX = 0.0, panelY = 0.0, panelW = 0.0, panelH = 0.0;
+    switch( panelNum )
+    {
+        case panelNames::delayTime :
+        {
+            panelX = delayTimeSyncButton.getX() - PANEL_SPACING;
+            panelY = delayTimeSyncButton.getY() - TEXT_HEIGHT;
+            panelW = SLIDERSIZE + 2*PANEL_SPACING;
+            panelH = delayTimeJitterSyncButton.getToggleState() ? delaySyncJitterDivisionBox.getBottom() - panelY : delayTimeJitterSlider.getBottom() - panelY;
+            panelH += PANEL_SPACING;
+            break;
+        }
+        case panelNames::feedback :
+        {
+            panelX = feedbackSlider.getX() - PANEL_SPACING;
+            panelY = feedbackSlider.getY() - TEXT_HEIGHT;
+            panelW = SLIDERSIZE + 2*PANEL_SPACING;
+            panelH = feedbackSlider.getBottom() - panelY;
+            panelH += PANEL_SPACING;
+            break;
+        }
+        case panelNames::gRate :
+        {
+            panelX = rateSyncButton.getX() - PANEL_SPACING;
+            panelY = rateSyncButton.getY() - TEXT_HEIGHT;
+            panelW = SLIDERSIZE + 2*PANEL_SPACING;
+            panelH = rateSyncButton.getToggleState() ? rateSyncDivisionBox.getBottom() - panelY : rateSlider.getBottom() - panelY;
+            panelH += PANEL_SPACING;
+            break;
+        }
+        case panelNames::transposition :
+        {
+            panelX = transpositionSlider.getX() - PANEL_SPACING;
+            panelY = transpositionSlider.getY() - TEXT_HEIGHT;
+            panelW = SLIDERSIZE + 2*PANEL_SPACING;
+            panelH = harmonySliders[ 0 ].getBottom() - panelY;
+            panelH += PANEL_SPACING;
+            break;
+        }
+        case panelNames::gParams :
+        {
+            panelX = crossTalkSlider.getX() - PANEL_SPACING;
+            panelY = crossTalkSlider.getY() - 2*TEXT_HEIGHT;
+            panelW = densitySlider.getRight() - panelX;
+            panelW += PANEL_SPACING;
+            panelH = reverseSlider.getBottom() - panelY;
+            panelH += PANEL_SPACING;
+            break;
+        }
+        case panelNames::fx :
+        {
+            panelX = fxNameButtons[ effects::crush ].getX() - PANEL_SPACING;
+            panelY = fxNameButtons[ effects::crush ].getY() - TEXT_HEIGHT;
+            panelW = SLIDERSIZE + 2*PANEL_SPACING;
+            if ( fxNameButtons[ effects::crush ].getToggleState() )
+                panelH = srDividerSlider.getBottom() - panelY;
+            else if ( fxNameButtons[ effects::filter ].getToggleState() )
+                panelH =  filterJitterSlider.getBottom() - panelY;
+            else if ( fxNameButtons[ effects::ringMod ].getToggleState() )
+                panelH = ringModJitterSlider.getBottom() - panelY;
+            panelH += PANEL_SPACING;
+            break;
+        }
+        case panelNames::output :
+        {
+            panelX = outputLevelSlider.getX() - PANEL_SPACING;
+            panelY = outputLevelSlider.getY() - TEXT_HEIGHT;
+            panelW = outputLevelSlider.getRight() - panelX;
+            panelW += PANEL_SPACING;
+            panelH = interpolationTypeBox.getBottom() - panelY;
+            panelH += PANEL_SPACING;
+            break;
+        }
+    }
+    panels[ panelNum ].setBounds(  panelX, panelY, panelW, panelH );
 }
